@@ -43,10 +43,14 @@ function ProductList() {
         <div>
             <h2 className="mb-4">Featured Products</h2>
             {/* Bootstrap Grid Layout */}
-            <Row xs={1} md={2} lg={3} className="g-4">
+           // Inside ProductList.js return statement:
+            <Row xs={1} md={2} lg={3} className="g-4 animate__animated animate__fadeInUp">
                 {products.map(product => (
+                    // ... inside the map loop ...
                     <Col key={product.product_id}>
-                        <Card className="h-100 shadow-sm">
+                        {/* ADD 'product-card' HERE */}
+                        <Card className="h-100 product-card shadow-sm"> 
+                            {/* ... rest of your card code ... */}
                             
                             {/* --- NEW: Image Logic Starts Here --- */}
                             <div style={{ height: '200px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

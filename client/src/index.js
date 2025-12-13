@@ -1,3 +1,8 @@
+import 'bootstrap/dist/css/bootstrap.min.css';
+import 'animate.css'; 
+import './index.css';
+
+
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 // This is the important new line for Bootstrap styles:

@@ -1,13 +1,143 @@
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+/* client/src/index.css */
+
+/* 1. IMPORT FONTS (Classic Serif for Headings, Clean Sans for Body) */
+@import url('https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&family=Playfair+Display:wght@400;700&display=swap');
+
+:root {
+  /* --- THEME VARIABLES: "Home Decor" Brand Palette --- */
+  
+  /* Primary: Deep Sage Green (Trustworthy, Natural) */
+  --brand-primary: #4A5D45; 
+  
+  /* Secondary: Soft Grey-Green (Calming) */
+  --brand-secondary: #8F9779;
+  
+  /* Accent: Warm Wood/Gold (Highlights/Prices) */
+  --brand-accent: #A67B5B; 
+  
+  /* Dark: Soft Charcoal (Use this instead of pure black) */
+  --brand-dark: #2C3531;
+  
+  /* Light: Warm Cream/Off-White (Premium background feel) */
+  --brand-bg: #F8F9F5;
+  
+  /* Card Background: Pure White */
+  --brand-card-bg: #FFFFFF;
 }
 
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+/* 2. GLOBAL BASE STYLES */
+body {
+  margin: 0;
+  font-family: 'Lato', sans-serif; /* Clean body font */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--brand-bg);
+  color: var(--brand-dark);
+  line-height: 1.7; /* More breathing room for elegance */
+}
+
+/* Typography Overrides */
+h1, h2, h3, h4, h5, .navbar-brand {
+  font-family: 'Playfair Display', serif; /* Elegant Heading Font */
+  font-weight: 700;
+  color: var(--brand-dark);
+  letter-spacing: -0.5px;
+}
+
+a {
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+a:hover {
+  color: var(--brand-accent);
+}
+
+/* 3. CUSTOM NAVBAR */
+.navbar-custom {
+  background-color: var(--brand-primary) !important;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15); /* Deep, soft shadow */
+  padding-top: 15px;
+  padding-bottom: 15px;
+}
+
+.navbar-custom .nav-link {
+  color: rgba(255,255,255,0.85) !important;
+  font-weight: 400;
+  letter-spacing: 0.5px;
+  margin: 0 5px;
+}
+
+.navbar-custom .nav-link:hover {
+  color: #fff !important;
+  transform: translateY(-1px);
+}
+
+/* 4. LUXURY BUTTONS */
+.btn-primary {
+  background-color: var(--brand-primary) !important;
+  border-color: var(--brand-primary) !important;
+  padding: 10px 25px;
+  border-radius: 6px; 
+  letter-spacing: 0.5px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+  background-color: var(--brand-dark) !important;
+  border-color: var(--brand-dark) !important;
+  transform: translateY(-2px); /* Slight lift */
+  box-shadow: 0 4px 12px rgba(74, 93, 69, 0.3);
+}
+
+.btn-outline-dark {
+  border-width: 2px;
+  font-weight: 600;
+}
+
+/* 5. LUXURY PRODUCT CARDS */
+.product-card {
+  border: none !important;
+  border-radius: 12px !important;
+  background-color: var(--brand-card-bg) !important;
+  /* Smooth bouncy transition for hover effects */
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.4s ease; 
+  overflow: hidden; /* Important for the image zoom effect */
+}
+
+.product-card:hover {
+  transform: translateY(-8px); /* Lifts the card up */
+  box-shadow: 0 15px 30px rgba(0,0,0,0.1) !important; /* Deep shadow */
+}
+
+/* Image Zoom Logic */
+.card-img-wrapper {
+  overflow: hidden;
+  position: relative;
+  background-color: #f0f0f0;
+}
+
+.card-img-top {
+  transition: transform 0.6s ease; /* Smooth, slow zoom */
+}
+
+.product-card:hover .card-img-top {
+  transform: scale(1.08); /* Zooms in 8% on hover */
+}
+
+/* Price & Details */
+.text-primary {
+  color: var(--brand-accent) !important; /* Use Gold/Wood color for price */
+  font-weight: 700;
+}
+
+/* Badges */
+.badge {
+  font-weight: 600;
+  letter-spacing: 1px;
+  padding: 6px 10px;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  border-radius: 4px;
 }
