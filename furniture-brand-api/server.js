@@ -200,6 +200,34 @@ app.put('/api/orders/:id/status', async (req, res) => {
     }
 });
 
+// SMART DELETE: If product has orders, Archive it. If not, Delete it.
+app.delete('/api/products/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        // 1. Try to Hard Delete
+        await pool.query("DELETE FROM products WHERE product_id = $1", [id]);
+        
+        // If successful:
+        res.json({ message: "Product permanently deleted." });
+
+    } catch (err) {
+        // 2. Catch Foreign Key Violation (Error 23503 means "It's used in an order")
+        if (err.code === '23503') {
+            try {
+                // 3. Perform "Soft Delete" (Set is_active = false)
+                await pool.query("UPDATE products SET is_active = false WHERE product_id = $1", [req.params.id]);
+                return res.json({ message: "Product archived (hidden) because it has order history." });
+            } catch (updateErr) {
+                return res.status(500).json({ error: "Failed to archive product." });
+            }
+        }
+        
+        console.error(err.message);
+        res.status(500).json({ error: "Server Error" });
+    }
+});
+
 // ... app.listen ...
 
 app.listen(PORT, () => {

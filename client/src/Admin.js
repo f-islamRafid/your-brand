@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Form, Button, Table, Alert, Badge, Nav, Tab, Card, InputGroup } from 'react-bootstrap';
 import toast from 'react-hot-toast';
-import { useNavigate } from 'react-router-dom'; 
+import { useNavigate } from 'react-router-dom';
 import { Modal } from 'react-bootstrap'; // Needed for Edit Modal
 
 // --- SUB-COMPONENT: PRODUCT MANAGER ---
@@ -17,12 +17,12 @@ function ProductManager({ products, fetchProducts }) {
     const [editData, setEditData] = useState({ product_id: '', name: '', description: '', base_price: '', material: '', is_active: true });
 
 
-    const filteredProducts = products.filter(p => 
-        p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    const filteredProducts = products.filter(p =>
+        p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         p.product_id.toString().includes(searchTerm)
     );
 
-    const handleChange = (e) => setFormData({...formData, [e.target.name]: e.target.value});
+    const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
     const handleFileChange = (e) => setFile(e.target.files[0]);
 
     const handleSubmit = async (e) => {
@@ -42,17 +42,31 @@ function ProductManager({ products, fetchProducts }) {
         } catch (err) { toast.error("Network Error"); }
     };
 
+   // Inside client/src/Admin.js -> ProductManager component
+
     const handleDelete = async (id) => {
-        if (window.confirm("Delete this product?")) {
-            const res = await fetch(`/api/products/${id}`, { method: 'DELETE' });
-            if (res.ok) { toast.success("Deleted!"); fetchProducts(); }
-            else { toast.error("Cannot delete (might be in an order)"); }
+        // Updated confirmation text to be accurate
+        if (window.confirm("Delete this product? (If it has orders, it will be Archived instead)")) {
+            try {
+                const res = await fetch(`/api/products/${id}`, { method: 'DELETE' });
+                const data = await res.json(); // Get the message from server
+
+                if (res.ok) {
+                    // Success! Show the specific message (Deleted vs Archived)
+                    toast.success(data.message); 
+                    fetchProducts();
+                } else {
+                    toast.error(data.error || "Failed to delete");
+                }
+            } catch (err) {
+                toast.error("Network Error");
+            }
         }
     };
 
     // EDIT LOGIC (From previous steps, integrated here for completeness)
     const openEditModal = (product) => {
-        setEditData(product); 
+        setEditData(product);
         setShowEditModal(true);
     };
     const handleEditChange = (e) => {
@@ -118,7 +132,7 @@ function ProductManager({ products, fetchProducts }) {
                     <tbody>
                         {filteredProducts.map(p => (
                             <tr key={p.product_id}>
-                                <td><img src={`/images/${p.product_id}.jpg`} alt="" width="40" height="40" className="rounded" onError={(e)=>{e.target.onerror=null;e.target.src="https://placehold.co/40"}}/></td>
+                                <td><img src={`/images/${p.product_id}.jpg`} alt="" width="40" height="40" className="rounded" onError={(e) => { e.target.onerror = null; e.target.src = "https://placehold.co/40" }} /></td>
                                 <td className="fw-bold">{p.name}</td>
                                 <td>৳{p.base_price}</td>
                                 <td><Badge bg={p.is_active ? 'success' : 'secondary'}>{p.is_active ? 'Active' : 'Hidden'}</Badge></td>
@@ -155,20 +169,50 @@ function ProductManager({ products, fetchProducts }) {
     );
 }
 
+
 // --- SUB-COMPONENT: ORDER MANAGER ---
-function OrderManager({ orders }) {
+function OrderManager({ orders, fetchOrders }) { // Added fetchOrders prop to refresh data
     const totalRevenue = orders.reduce((sum, order) => sum + parseFloat(order.total_amount), 0).toFixed(2);
     const totalOrders = orders.length;
+
+    // Handle Status Change
+    const handleStatusChange = async (orderId, newStatus) => {
+        try {
+            const res = await fetch(`/api/orders/${orderId}/status`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: newStatus })
+            });
+
+            if (res.ok) {
+                toast.success(`Order #${orderId} marked as ${newStatus}`);
+                fetchOrders(); // Refresh the list to show new color
+            } else {
+                toast.error("Failed to update status");
+            }
+        } catch (err) {
+            toast.error("Network Error");
+        }
+    };
+
+    // Helper for Badge Color
+    const getStatusColor = (status) => {
+        switch (status) {
+            case 'Completed': return 'success'; // Green
+            case 'Shipped': return 'info';    // Blue
+            case 'Cancelled': return 'danger'; // Red
+            default: return 'warning';        // Yellow (Pending)
+        }
+    };
 
     return (
         <div className="animate__animated animate__fadeIn">
             <h3 className="mb-4">Order Management</h3>
             <Row className="mb-4">
                 <Col md={4}>
-                    <Card className="border-0 shadow-sm text-white" style={{background: 'linear-gradient(135deg, #4A5D45 0%, #2C3531 100%)'}}>
+                    <Card className="border-0 shadow-sm text-white" style={{ background: 'linear-gradient(135deg, #4A5D45 0%, #2C3531 100%)' }}>
                         <Card.Body>
                             <h6>Total Revenue</h6>
-                            {/* 👇 CURRENCY UPDATED HERE */}
                             <h3>৳{totalRevenue}</h3>
                         </Card.Body>
                     </Card>
@@ -188,10 +232,32 @@ function OrderManager({ orders }) {
                     {orders.map(order => (
                         <Card key={order.order_id} className="border-0 shadow-sm">
                             <Card.Header className="bg-white d-flex justify-content-between align-items-center py-3">
-                                <div><strong>Order #{order.order_id}</strong> <span className="text-muted mx-2">|</span> {order.customer_name}</div>
-                                <div className="text-end">
-                                    <Badge bg="warning" text="dark" className="me-2">Pending</Badge>
-                                    <strong className="fs-5">৳{order.total_amount}</strong>
+                                <div>
+                                    <strong>Order #{order.order_id}</strong>
+                                    <span className="text-muted mx-2">|</span>
+                                    {order.customer_name}
+                                </div>
+                                <div className="d-flex align-items-center">
+                                    <strong className="fs-5 me-3">৳{order.total_amount}</strong>
+
+                                    {/* STATUS DROPDOWN */}
+                                    <Form.Select
+                                        size="sm"
+                                        value={order.status || 'Pending'}
+                                        onChange={(e) => handleStatusChange(order.order_id, e.target.value)}
+                                        style={{
+                                            width: '130px',
+                                            fontWeight: 'bold',
+                                            borderColor: 'transparent',
+                                            backgroundColor: `var(--bs-${getStatusColor(order.status || 'Pending')})`,
+                                            color: order.status === 'Pending' ? 'black' : 'white'
+                                        }}
+                                    >
+                                        <option value="Pending">🕒 Pending</option>
+                                        <option value="Shipped">🚚 Shipped</option>
+                                        <option value="Completed">✅ Completed</option>
+                                        <option value="Cancelled">❌ Cancelled</option>
+                                    </Form.Select>
                                 </div>
                             </Card.Header>
                             <Card.Body>
@@ -221,7 +287,7 @@ function OrderManager({ orders }) {
 function Admin() {
     const [products, setProducts] = useState([]);
     const [orders, setOrders] = useState([]);
-    const navigate = useNavigate(); 
+    const navigate = useNavigate();
 
     useEffect(() => {
         fetchProducts();
@@ -234,15 +300,15 @@ function Admin() {
     const handleLogout = () => {
         localStorage.removeItem('admin_token');
         toast.success("Logged out successfully");
-        navigate('/login'); 
+        navigate('/login');
     };
 
     return (
-        <Container fluid className="py-4 bg-light" style={{minHeight: '100vh'}}>
+        <Container fluid className="py-4 bg-light" style={{ minHeight: '100vh' }}>
             <Tab.Container id="admin-tabs" defaultActiveKey="products">
                 <Row>
                     <Col md={3} lg={2} className="mb-4">
-                        <Card className="border-0 shadow-sm sticky-top" style={{top: '100px'}}>
+                        <Card className="border-0 shadow-sm sticky-top" style={{ top: '100px' }}>
                             <Card.Body className="p-2">
                                 <div className="text-center py-3 border-bottom mb-2">
                                     <h5 className="fw-bold text-success">Admin Panel</h5>
@@ -260,7 +326,9 @@ function Admin() {
                     <Col md={9} lg={10}>
                         <Tab.Content>
                             <Tab.Pane eventKey="products"><ProductManager products={products} fetchProducts={fetchProducts} /></Tab.Pane>
-                            <Tab.Pane eventKey="orders"><OrderManager orders={orders} /></Tab.Pane>
+                            <Tab.Pane eventKey="orders">
+                                <OrderManager orders={orders} fetchOrders={fetchOrders} />
+                            </Tab.Pane>
                         </Tab.Content>
                     </Col>
                 </Row>
