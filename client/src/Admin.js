@@ -1,9 +1,211 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Tab, Row, Col, Nav, Card, Form, Table, Button, Alert, Modal, Badge, Spinner } from 'react-bootstrap';
-import { toast } from 'react-hot-toast';
+import { Container, Row, Col, Form, Button, Table, Alert, Badge, Nav, Tab, Card, InputGroup, Modal } from 'react-bootstrap';
+import toast from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
+
+// --- SUB-COMPONENT: PRODUCT MANAGER ---
+function ProductManager({ products, fetchProducts }) {
+    const [searchTerm, setSearchTerm] = useState('');
+    const [showForm, setShowForm] = useState(false);
+    
+    // Form State
+    const [formData, setFormData] = useState({ name: '', description: '', base_price: '', material: '' });
+    const [file, setFile] = useState(null);
+    
+    // Edit State
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [editData, setEditData] = useState({ product_id: '', name: '', description: '', base_price: '', material: '', is_active: true });
+
+    // Filter Logic
+    const filteredProducts = products.filter(p => 
+        p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        p.product_id.toString().includes(searchTerm)
+    );
+
+    // --- HANDLERS ---
+    const handleChange = (e) => setFormData({...formData, [e.target.name]: e.target.value});
+    const handleFileChange = (e) => setFile(e.target.files[0]);
+
+    // CREATE Product
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        const data = new FormData();
+        Object.keys(formData).forEach(key => data.append(key, formData[key]));
+        if (file) data.append('image', file);
+
+        try {
+            const res = await fetch('/api/products', { method: 'POST', body: data });
+            if (res.ok) {
+                toast.success("Product Created!");
+                setFormData({ name: '', description: '', base_price: '', material: '' });
+                setFile(null);
+                setShowForm(false);
+                fetchProducts();
+            } else {
+                toast.error("Operation Failed");
+            }
+        } catch (err) { toast.error("Network Error"); }
+    };
+
+    // SMART DELETE Product
+    const handleDelete = async (id) => {
+        if (window.confirm("Delete this product? (If it has orders, it will be Archived instead)")) {
+            try {
+                const res = await fetch(`/api/products/${id}`, { method: 'DELETE' });
+                const data = await res.json(); 
+
+                if (res.ok) {
+                    toast.success(data.message); 
+                    fetchProducts();
+                } else {
+                    toast.error(data.error || "Failed to delete");
+                }
+            } catch (err) {
+                toast.error("Network Error");
+            }
+        }
+    };
+
+    // EDIT Handlers
+    const openEditModal = (product) => {
+        setEditData(product); 
+        setShowEditModal(true);
+    };
+    const handleEditChange = (e) => {
+        const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
+        setEditData({ ...editData, [e.target.name]: value });
+    };
+    const handleSaveEdit = async () => {
+        try {
+            const res = await fetch(`/api/products/${editData.product_id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(editData)
+            });
+
+            if (res.ok) {
+                toast.success("Product Updated!");
+                setShowEditModal(false);
+                fetchProducts();
+            } else {
+                toast.error("Failed to update");
+            }
+        } catch (err) {
+            toast.error("Update error");
+        }
+    };
+
+    return (
+        <div className="animate__animated animate__fadeIn">
+            <div className="d-flex justify-content-between align-items-center mb-4">
+                <h3 className="mb-0">Inventory</h3>
+                <Button variant={showForm ? "secondary" : "primary"} onClick={() => setShowForm(!showForm)}>
+                    {showForm ? "Cancel" : "+ Add New Product"}
+                </Button>
+            </div>
+
+            {/* ADD FORM */}
+            {showForm && (
+                <Card className="mb-4 shadow-sm border-0 bg-light">
+                    <Card.Body>
+                        <h5 className="mb-3">New Product Details</h5>
+                        <Form onSubmit={handleSubmit}>
+                            <Row>
+                                <Col md={6}>
+                                    <Form.Group className="mb-3"><Form.Label>Name</Form.Label><Form.Control type="text" name="name" value={formData.name} onChange={handleChange} required /></Form.Group>
+                                    <Form.Group className="mb-3"><Form.Label>Price (৳)</Form.Label><Form.Control type="number" name="base_price" value={formData.base_price} onChange={handleChange} required /></Form.Group>
+                                </Col>
+                                <Col md={6}>
+                                    <Form.Group className="mb-3"><Form.Label>Material</Form.Label><Form.Control type="text" name="material" value={formData.material} onChange={handleChange} /></Form.Group>
+                                    <Form.Group className="mb-3"><Form.Label>Image</Form.Label><Form.Control type="file" onChange={handleFileChange} /></Form.Group>
+                                </Col>
+                                <Col md={12}>
+                                    <Form.Group className="mb-3"><Form.Label>Description</Form.Label><Form.Control as="textarea" name="description" value={formData.description} onChange={handleChange} /></Form.Group>
+                                    <Button type="submit" variant="success">Create Product</Button>
+                                </Col>
+                            </Row>
+                        </Form>
+                    </Card.Body>
+                </Card>
+            )}
+
+            {/* SEARCH BAR */}
+            <InputGroup className="mb-3 shadow-sm">
+                <InputGroup.Text className="bg-white border-0">🔍</InputGroup.Text>
+                <Form.Control 
+                    placeholder="Search by name or ID..." 
+                    className="border-0"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                />
+            </InputGroup>
+
+            {/* PRODUCT TABLE */}
+            <Card className="border-0 shadow-sm">
+                <Table hover responsive className="mb-0 align-middle">
+                    <thead className="bg-light"><tr><th>Img</th><th>Name</th><th>Price</th><th>Status</th><th>Actions</th></tr></thead>
+                    <tbody>
+                        {filteredProducts.map(p => (
+                            <tr key={p.product_id}>
+                                <td><img src={`/images/${p.product_id}.jpg`} alt="mini" width="40" height="40" className="rounded" onError={(e)=>{e.target.onerror=null;e.target.src="https://placehold.co/40"}}/></td>
+                                <td className="fw-bold">{p.name}</td>
+                                <td>৳{p.base_price}</td>
+                                <td><Badge bg={p.is_active ? 'success' : 'secondary'}>{p.is_active ? 'Active' : 'Hidden'}</Badge></td>
+                                <td>
+                                    <Button variant="link" className="text-decoration-none p-0 me-3" onClick={() => openEditModal(p)}>Edit</Button>
+                                    <Button variant="link" className="text-danger text-decoration-none p-0" onClick={() => handleDelete(p.product_id)}>Delete</Button>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </Table>
+            </Card>
+
+            {/* EDIT MODAL */}
+            <Modal show={showEditModal} onHide={() => setShowEditModal(false)}>
+                <Modal.Header closeButton>
+                    <Modal.Title>Edit Product</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    <Form>
+                        <Form.Group className="mb-3">
+                            <Form.Label>Name</Form.Label>
+                            <Form.Control type="text" name="name" value={editData.name} onChange={handleEditChange} />
+                        </Form.Group>
+                        <Form.Group className="mb-3">
+                            <Form.Label>Price (৳)</Form.Label>
+                            <Form.Control type="number" name="base_price" value={editData.base_price} onChange={handleEditChange} />
+                        </Form.Group>
+                        <Form.Group className="mb-3">
+                            <Form.Label>Material</Form.Label>
+                            <Form.Control type="text" name="material" value={editData.material} onChange={handleEditChange} />
+                        </Form.Group>
+                        <Form.Group className="mb-3">
+                            <Form.Label>Description</Form.Label>
+                            <Form.Control as="textarea" rows={3} name="description" value={editData.description} onChange={handleEditChange} />
+                        </Form.Group>
+                        <Form.Group className="mb-3">
+                            <Form.Check 
+                                type="switch" 
+                                label="Product Active (Visible in Store)" 
+                                name="is_active"
+                                checked={editData.is_active}
+                                onChange={handleEditChange}
+                            />
+                        </Form.Group>
+                    </Form>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="secondary" onClick={() => setShowEditModal(false)}>Cancel</Button>
+                    <Button variant="primary" onClick={handleSaveEdit}>Save Changes</Button>
+                </Modal.Footer>
+            </Modal>
+        </div>
+    );
+}
 
 // --- SUB-COMPONENT: ORDER MANAGER ---
-function OrderManager({ orders, fetchOrders }) { // Added fetchOrders prop to refresh data
+function OrderManager({ orders, fetchOrders }) {
     const totalRevenue = orders.reduce((sum, order) => sum + parseFloat(order.total_amount), 0).toFixed(2);
     const totalOrders = orders.length;
 
@@ -18,7 +220,7 @@ function OrderManager({ orders, fetchOrders }) { // Added fetchOrders prop to re
 
             if (res.ok) {
                 toast.success(`Order #${orderId} marked as ${newStatus}`);
-                fetchOrders(); // Refresh the list to show new color
+                fetchOrders(); // Refresh list
             } else {
                 toast.error("Failed to update status");
             }
@@ -40,6 +242,8 @@ function OrderManager({ orders, fetchOrders }) { // Added fetchOrders prop to re
     return (
         <div className="animate__animated animate__fadeIn">
             <h3 className="mb-4">Order Management</h3>
+            
+            {/* STATS CARDS */}
             <Row className="mb-4">
                 <Col md={4}>
                     <Card className="border-0 shadow-sm text-white" style={{background: 'linear-gradient(135deg, #4A5D45 0%, #2C3531 100%)'}}>
@@ -65,11 +269,12 @@ function OrderManager({ orders, fetchOrders }) { // Added fetchOrders prop to re
                         <Card key={order.order_id} className="border-0 shadow-sm">
                             <Card.Header className="bg-white d-flex justify-content-between align-items-center py-3">
                                 <div>
-                                    <strong>Order #{order.order_id}</strong> 
-                                    <span className="text-muted mx-2">|</span> 
-                                    {order.customer_name}
+                                    <strong>Order #{order.order_id}</strong>
+                                    <span className="text-muted mx-2">|</span>
+                                    <span className="text-primary fw-bold">{order.customer_name}</span>
                                 </div>
                                 <div className="d-flex align-items-center">
+                                    <span className="text-muted small me-3">{new Date(order.created_at).toLocaleDateString()}</span>
                                     <strong className="fs-5 me-3">৳{order.total_amount}</strong>
                                     
                                     {/* STATUS DROPDOWN */}
@@ -78,7 +283,7 @@ function OrderManager({ orders, fetchOrders }) { // Added fetchOrders prop to re
                                         value={order.status || 'Pending'} 
                                         onChange={(e) => handleStatusChange(order.order_id, e.target.value)}
                                         style={{ 
-                                            width: '130px', 
+                                            width: '140px', 
                                             fontWeight: 'bold',
                                             borderColor: 'transparent',
                                             backgroundColor: `var(--bs-${getStatusColor(order.status || 'Pending')})`,
@@ -93,13 +298,16 @@ function OrderManager({ orders, fetchOrders }) { // Added fetchOrders prop to re
                                 </div>
                             </Card.Header>
                             <Card.Body>
-                                <p className="small text-muted mb-3"><strong>Ship To:</strong> {order.shipping_address}</p>
+                                <p className="small text-muted mb-3">
+                                    <strong>Ship To:</strong> {order.shipping_address} <br/>
+                                    <strong>Email:</strong> {order.email}
+                                </p>
                                 <Table size="sm" borderless className="mb-0">
                                     <thead className="text-muted small border-bottom"><tr><th>Item</th><th>Qty</th><th className="text-end">Price</th></tr></thead>
                                     <tbody>
                                         {order.items && order.items.map((item, idx) => (
                                             <tr key={idx}>
-                                                <td>{item.product_name}</td>
+                                                <td>{item.name || item.product_name}</td>
                                                 <td>x{item.quantity}</td>
                                                 <td className="text-end">৳{item.price_at_purchase}</td>
                                             </tr>
@@ -115,345 +323,75 @@ function OrderManager({ orders, fetchOrders }) { // Added fetchOrders prop to re
     );
 }
 
+// --- MAIN ADMIN LAYOUT ---
+function Admin() {
+    const [products, setProducts] = useState([]);
+    const [orders, setOrders] = useState([]);
+    const navigate = useNavigate(); 
 
-// --- SUB-COMPONENT: PRODUCT MANAGER ---
-function ProductManager({ products, fetchProducts }) {
-    const [searchTerm, setSearchTerm] = useState('');
-    const [showModal, setShowModal] = useState(false);
-    const [currentProduct, setCurrentProduct] = useState(null);
-    const [isEditing, setIsEditing] = useState(false);
-    const [formData, setFormData] = useState({ name: '', base_price: '', description: '', material: '', is_active: true });
+    useEffect(() => {
+        fetchProducts();
+        fetchOrders();
+    }, []);
 
-    const handleSearch = (e) => {
-        setSearchTerm(e.target.value);
-    };
+    // Fetch Logic
+    const fetchProducts = () => fetch('/api/admin/products').then(res => res.json()).then(setProducts);
+    const fetchOrders = () => fetch('/api/orders').then(res => res.json()).then(setOrders);
 
-    const filteredProducts = products.filter(product =>
-        product.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-
-    const handleShowModal = (product = null) => {
-        if (product) {
-            setCurrentProduct(product);
-            setIsEditing(true);
-            setFormData({ 
-                name: product.name, 
-                base_price: product.base_price, 
-                description: product.description, 
-                material: product.material, 
-                is_active: product.is_active 
-            });
-        } else {
-            setCurrentProduct(null);
-            setIsEditing(false);
-            setFormData({ name: '', base_price: '', description: '', material: '', is_active: true });
-        }
-        setShowModal(true);
-    };
-
-    const handleCloseModal = () => setShowModal(false);
-
-    const handleChange = (e) => {
-        const { name, value, type, checked } = e.target;
-        setFormData(prev => ({
-            ...prev,
-            [name]: type === 'checkbox' ? checked : value
-        }));
-    };
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        const url = isEditing ? `/api/products/${currentProduct.product_id}` : '/api/products';
-        const method = isEditing ? 'PUT' : 'POST';
-
-        try {
-            const res = await fetch(url, {
-                method,
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(formData)
-            });
-
-            if (res.ok) {
-                toast.success(`Product ${isEditing ? 'updated' : 'added'} successfully!`);
-                handleCloseModal();
-                fetchProducts();
-            } else {
-                toast.error(`Failed to ${isEditing ? 'update' : 'add'} product.`);
-            }
-        } catch (err) {
-            toast.error("Network Error");
-        }
-    };
-
-    const handleDelete = async (id) => {
-        if (window.confirm("Delete this product? (If it has orders, it will be Archived instead)")) {
-            try {
-                const res = await fetch(`/api/products/${id}`, { method: 'DELETE' });
-                const data = await res.json(); // Get the message from server
-
-                if (res.ok) {
-                    // Success! Show the specific message (Deleted vs Archived)
-                    toast.success(data.message); 
-                    fetchProducts();
-                } else {
-                    toast.error(data.error || "Failed to delete");
-                }
-            } catch (err) {
-                toast.error("Network Error");
-            }
-        }
+    // Logout Logic
+    const handleLogout = () => {
+        localStorage.removeItem('admin_token'); 
+        toast.success("Logged out successfully");
+        navigate('/login'); 
     };
 
     return (
-        <div className="animate__animated animate__fadeIn">
-            <h3 className="mb-4">Product Inventory</h3>
-            <div className="d-flex justify-content-between mb-4">
-                <Form.Control
-                    type="search"
-                    placeholder="🔍 Search..."
-                    value={searchTerm}
-                    onChange={handleSearch}
-                    style={{ width: '300px' }}
-                />
-                <Button variant="success" onClick={() => handleShowModal(null)}>
-                    + Add New Product
-                </Button>
-            </div>
+        <Container fluid className="py-4 bg-light" style={{minHeight: '100vh'}}>
+            <Tab.Container id="admin-tabs" defaultActiveKey="products">
+                <Row>
+                    {/* LEFT SIDEBAR */}
+                    <Col md={3} lg={2} className="mb-4">
+                        <Card className="border-0 shadow-sm sticky-top" style={{top: '100px'}}>
+                            <Card.Body className="p-2">
+                                <div className="text-center py-3 border-bottom mb-2">
+                                    <h5 className="fw-bold text-success">Admin Panel</h5>
+                                </div>
+                                <Nav variant="pills" className="flex-column">
+                                    <Nav.Item>
+                                        <Nav.Link eventKey="products" className="mb-1 fw-bold text-dark">📦 Products</Nav.Link>
+                                    </Nav.Item>
+                                    <Nav.Item>
+                                        <Nav.Link eventKey="orders" className="mb-1 fw-bold text-dark">📋 Orders</Nav.Link>
+                                    </Nav.Item>
+                                    
+                                    <hr className="my-3" />
 
-            <Card className="shadow-sm">
-                <Card.Body>
-                    <Table hover responsive className="mb-0">
-                        <thead>
-                            <tr>
-                                <th style={{width: '70px'}}>Img</th>
-                                <th>Name</th>
-                                <th style={{width: '100px'}}>Price</th>
-                                <th style={{width: '100px'}}>Status</th>
-                                <th style={{width: '120px'}}>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filteredProducts.map(product => (
-                                <tr key={product.product_id}>
-                                    <td>
-                                        <img 
-                                            src={`/images/${product.product_id}.jpg`} 
-                                            alt={product.name} 
-                                            style={{ width: '50px', height: '50px', objectFit: 'cover', borderRadius: '4px' }}
-                                            onError={(e) => { e.target.onerror = null; e.target.src = "https://placehold.co/50x50?text=I"; }}
-                                        />
-                                    </td>
-                                    <td>
-                                        <strong className="d-block">{product.name}</strong>
-                                        <span className="text-muted small">Material: {product.material}</span>
-                                    </td>
-                                    <td>৳{product.base_price}</td>
-                                    <td>
-                                        <Badge bg={product.is_active ? 'success' : 'secondary'}>
-                                            {product.is_active ? 'ACTIVE' : 'HIDDEN'}
-                                        </Badge>
-                                    </td>
-                                    <td>
-                                        <Button size="sm" variant="outline-primary" className="me-2" onClick={() => handleShowModal(product)}>Edit</Button>
-                                        <Button size="sm" variant="outline-danger" onClick={() => handleDelete(product.product_id)}>Delete</Button>
-                                    </td>
-                                </tr>
-                            ))}
-                            {filteredProducts.length === 0 && (
-                                <tr>
-                                    <td colSpan="5" className="text-center text-muted">No products match your search.</td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </Table>
-                </Card.Body>
-            </Card>
-
-            {/* Product Add/Edit Modal */}
-            <Modal show={showModal} onHide={handleCloseModal}>
-                <Modal.Header closeButton>
-                    <Modal.Title>{isEditing ? `Edit Product: ${currentProduct.name}` : 'Add New Product'}</Modal.Title>
-                </Modal.Header>
-                <Modal.Body>
-                    <Form onSubmit={handleSubmit}>
-                        <Form.Group className="mb-3">
-                            <Form.Label>Product Name</Form.Label>
-                            <Form.Control type="text" name="name" value={formData.name} onChange={handleChange} required />
-                        </Form.Group>
-                        <Form.Group className="mb-3">
-                            <Form.Label>Base Price (৳)</Form.Label>
-                            <Form.Control type="number" name="base_price" value={formData.base_price} onChange={handleChange} required />
-                        </Form.Group>
-                        <Form.Group className="mb-3">
-                            <Form.Label>Material</Form.Label>
-                            <Form.Control type="text" name="material" value={formData.material} onChange={handleChange} required />
-                        </Form.Group>
-                        <Form.Group className="mb-3">
-                            <Form.Label>Description</Form.Label>
-                            <Form.Control as="textarea" rows={3} name="description" value={formData.description} onChange={handleChange} />
-                        </Form.Group>
-                        {isEditing && (
-                            <Form.Group className="mb-3">
-                                <Form.Check
-                                    type="checkbox"
-                                    label="Active in Store (Uncheck to hide/archive)"
-                                    name="is_active"
-                                    checked={formData.is_active}
-                                    onChange={handleChange}
-                                />
-                            </Form.Group>
-                        )}
-                        <Button variant="primary" type="submit" className="w-100">
-                            {isEditing ? 'Save Changes' : 'Add Product'}
-                        </Button>
-                    </Form>
-                </Modal.Body>
-            </Modal>
-        </div>
-    );
-}
-
-// --- MAIN ADMIN COMPONENT ---
-function Admin({ fetchProducts }) {
-    const [products, setProducts] = useState([]);
-    const [orders, setOrders] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [loginInfo, setLoginInfo] = useState({ username: '', password: '' });
-    const [loginError, setLoginError] = useState('');
-
-    const isAdmin = localStorage.getItem('isAdmin') === 'true';
-
-    // Fetch Admin Products (includes inactive/archived)
-    const fetchAdminProducts = async () => {
-        try {
-            const res = await fetch('/api/admin/products');
-            const data = await res.json();
-            setProducts(data);
-            // Also call the main fetchProducts to refresh the shop view if needed
-            fetchProducts();
-        } catch (err) {
-            console.error("Failed to fetch admin products:", err);
-        }
-    };
-    
-    // Fetch Orders
-    const fetchOrders = async () => {
-        try {
-            const res = await fetch('/api/orders');
-            const data = await res.json();
-            setOrders(data);
-        } catch (err) {
-            console.error("Failed to fetch orders:", err);
-        }
-    };
-
-
-    useEffect(() => {
-        if (isAdmin) {
-            Promise.all([fetchAdminProducts(), fetchOrders()]).finally(() => setLoading(false));
-        } else {
-            setLoading(false);
-        }
-    }, [isAdmin]);
-
-    const handleLoginChange = (e) => {
-        setLoginInfo({ ...loginInfo, [e.target.name]: e.target.value });
-    };
-
-    const handleLoginSubmit = (e) => {
-        e.preventDefault();
-        // Mock Login: Use a simple hardcoded admin/admin for testing
-        if (loginInfo.username === 'admin' && loginInfo.password === 'admin') {
-            localStorage.setItem('isAdmin', 'true');
-            setLoginError('');
-            // Reload the component state
-            window.location.reload(); 
-        } else {
-            setLoginError('Invalid credentials. Use admin/admin');
-        }
-    };
-    
-    const handleLogout = () => {
-        localStorage.removeItem('isAdmin');
-        window.location.reload(); 
-    };
-
-    if (loading) {
-        return <Container className="py-5 text-center"><Spinner animation="border" /></Container>;
-    }
-
-    if (!isAdmin) {
-        return (
-            <Container className="py-5">
-                <Row className="justify-content-center">
-                    <Col md={6} lg={4}>
-                        <Card className="shadow-lg">
-                            <Card.Header className="bg-dark text-white text-center">
-                                <h4 className="mb-0">Admin Login</h4>
-                            </Card.Header>
-                            <Card.Body>
-                                <Form onSubmit={handleLoginSubmit}>
-                                    <Form.Group className="mb-3">
-                                        <Form.Label>Username</Form.Label>
-                                        <Form.Control type="text" name="username" value={loginInfo.username} onChange={handleLoginChange} required />
-                                    </Form.Group>
-                                    <Form.Group className="mb-3">
-                                        <Form.Label>Password</Form.Label>
-                                        <Form.Control type="password" name="password" value={loginInfo.password} onChange={handleLoginChange} required />
-                                    </Form.Group>
-                                    {loginError && <Alert variant="danger" className="py-2">{loginError}</Alert>}
-                                    <Button variant="success" type="submit" className="w-100 mt-2">
-                                        Log In
-                                    </Button>
-                                    <p className="text-center text-muted small mt-2">Hint: admin / admin</p>
-                                </Form>
+                                    <Nav.Item>
+                                        <Button variant="outline-danger" size="sm" className="w-100 text-start" onClick={handleLogout}>
+                                            🔒 Logout
+                                        </Button>
+                                    </Nav.Item>
+                                    <Nav.Item>
+                                        <Nav.Link href="/" className="mt-2 text-muted small">&larr; Back to Shop</Nav.Link>
+                                    </Nav.Item>
+                                </Nav>
                             </Card.Body>
                         </Card>
                     </Col>
-                </Row>
-            </Container>
-        );
-    }
 
-    // Admin Dashboard View
-    return (
-        <Container fluid className="py-4">
-            <Row>
-                <Col md={2}>
-                    <Card className="shadow-sm p-3 bg-white">
-                        <h4 className="mb-4 text-center">Admin Panel</h4>
-                        <Nav variant="pills" className="flex-column">
-                            <Nav.Item>
-                                <Nav.Link eventKey="products" className="mb-2 active-link" style={{ backgroundColor: '#0d6efd', color: 'white' }}>
-                                    📦 Products
-                                </Nav.Link>
-                            </Nav.Item>
-                            <Nav.Item>
-                                <Nav.Link eventKey="orders" className="mb-2 active-link">
-                                    🛒 Orders
-                                </Nav.Link>
-                            </Nav.Item>
-                            <Nav.Item>
-                                <Nav.Link onClick={handleLogout} className="text-danger">
-                                    🔑 Logout
-                                </Nav.Link>
-                            </Nav.Item>
-                        </Nav>
-                        <hr/>
-                        <Nav.Link href="/">← Back to Shop</Nav.Link>
-                    </Card>
-                </Col>
-                <Col md={10}>
-                    <Tab.Content>
-                        <Tab.Pane eventKey="products" className="fade show active">
-                            <ProductManager products={products} fetchProducts={fetchAdminProducts} />
-                        </Tab.Pane>
-                        <Tab.Pane eventKey="orders">
-                            <OrderManager orders={orders} fetchOrders={fetchOrders} />
-                        </Tab.Pane>
-                    </Tab.Content>
-                </Col>
-            </Row>
+                    {/* RIGHT CONTENT AREA */}
+                    <Col md={9} lg={10}>
+                        <Tab.Content>
+                            <Tab.Pane eventKey="products">
+                                <ProductManager products={products} fetchProducts={fetchProducts} />
+                            </Tab.Pane>
+                            <Tab.Pane eventKey="orders">
+                                <OrderManager orders={orders} fetchOrders={fetchOrders} />
+                            </Tab.Pane>
+                        </Tab.Content>
+                    </Col>
+                </Row>
+            </Tab.Container>
         </Container>
     );
 }
