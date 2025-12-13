@@ -9,10 +9,13 @@ function Login() {
 
     const handleLogin = (e) => {
         e.preventDefault();
-        // The Secret PIN is "932808"
-        if (password === '932808') {
+        
+        // --- SECURITY CHECK ---
+        // Change 'admin123' to whatever PIN you want
+        if (password === '008589') {
+            // Save a "token" in browser storage to remember we are logged in
             localStorage.setItem('admin_token', 'true');
-            navigate('/admin'); 
+            navigate('/admin'); // Send to dashboard
         } else {
             setError('Invalid Access PIN');
         }

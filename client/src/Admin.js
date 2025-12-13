@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Form, Button, Table, Alert, Badge, Nav, Tab, Card, InputGroup } from 'react-bootstrap';
 import toast from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom'; // Import hook for navigation
 
 // --- SUB-COMPONENT: PRODUCT MANAGER ---
 function ProductManager({ products, fetchProducts }) {
@@ -29,16 +30,14 @@ function ProductManager({ products, fetchProducts }) {
         if (file) data.append('image', file);
 
         const url = editMode ? `/api/products/${editId}` : '/api/products';
-        const method = editMode ? 'PUT' : 'POST';
-
-        // PUT request usually needs JSON if we aren't updating the image, 
-        // but for simplicity we'll keep using FormData or switch based on backend needs.
-        // NOTE: Our previous PUT backend endpoint expected JSON, so let's handle that:
+        // Note: For a real app, you might want separate logic for PUT (JSON) vs POST (FormData)
+        // For this prototype, if your backend supports it, this is fine. 
+        // If your backend PUT expects JSON, we need to adapt:
         
         try {
             let res;
             if (editMode) {
-                // Update (JSON)
+                // Update (JSON) - Assuming backend PUT expects JSON
                 res = await fetch(url, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
@@ -97,7 +96,7 @@ function ProductManager({ products, fetchProducts }) {
                 </Button>
             </div>
 
-            {/* ADD / EDIT FORM (Collapsible) */}
+            {/* ADD / EDIT FORM */}
             {showForm && (
                 <Card className="mb-4 shadow-sm border-0 bg-light">
                     <Card.Body>
@@ -136,7 +135,7 @@ function ProductManager({ products, fetchProducts }) {
             {/* PRODUCT TABLE */}
             <Card className="border-0 shadow-sm">
                 <Table hover responsive className="mb-0 align-middle">
-                    <thead className="bg-light"><tr><th>Img</th><th>Name</th><th>Price</th><th>Stock</th><th>Actions</th></tr></thead>
+                    <thead className="bg-light"><tr><th>Img</th><th>Name</th><th>Price</th><th>Status</th><th>Actions</th></tr></thead>
                     <tbody>
                         {filteredProducts.map(p => (
                             <tr key={p.product_id}>
@@ -159,7 +158,6 @@ function ProductManager({ products, fetchProducts }) {
 
 // --- SUB-COMPONENT: ORDER MANAGER ---
 function OrderManager({ orders }) {
-    // Quick Stats
     const totalRevenue = orders.reduce((sum, order) => sum + parseFloat(order.total_amount), 0).toFixed(2);
     const totalOrders = orders.length;
 
@@ -167,7 +165,6 @@ function OrderManager({ orders }) {
         <div className="animate__animated animate__fadeIn">
             <h3 className="mb-4">Order Management</h3>
             
-            {/* STATS CARDS */}
             <Row className="mb-4">
                 <Col md={4}>
                     <Card className="border-0 shadow-sm text-white" style={{background: 'linear-gradient(135deg, #4A5D45 0%, #2C3531 100%)'}}>
@@ -233,6 +230,7 @@ function OrderManager({ orders }) {
 function Admin() {
     const [products, setProducts] = useState([]);
     const [orders, setOrders] = useState([]);
+    const navigate = useNavigate(); // Hook for navigation
 
     useEffect(() => {
         fetchProducts();
@@ -241,6 +239,13 @@ function Admin() {
 
     const fetchProducts = () => fetch('/api/products').then(res => res.json()).then(setProducts);
     const fetchOrders = () => fetch('/api/orders').then(res => res.json()).then(setOrders);
+
+    // NEW: Logout Function
+    const handleLogout = () => {
+        localStorage.removeItem('admin_token'); // Throw away the key
+        toast.success("Logged out successfully");
+        navigate('/login'); // Send back to login screen
+    };
 
     return (
         <Container fluid className="py-4 bg-light" style={{minHeight: '100vh'}}>
@@ -260,8 +265,17 @@ function Admin() {
                                     <Nav.Item>
                                         <Nav.Link eventKey="orders" className="mb-1 fw-bold text-dark">📋 Orders</Nav.Link>
                                     </Nav.Item>
+                                    
+                                    <hr className="my-3" />
+
                                     <Nav.Item>
-                                        <Nav.Link href="/" className="mt-3 text-muted small">&larr; Back to Shop</Nav.Link>
+                                        {/* NEW: Logout Button */}
+                                        <Button variant="outline-danger" size="sm" className="w-100 text-start" onClick={handleLogout}>
+                                            🔒 Logout
+                                        </Button>
+                                    </Nav.Item>
+                                    <Nav.Item>
+                                        <Nav.Link href="/" className="mt-2 text-muted small">&larr; Back to Shop</Nav.Link>
                                     </Nav.Item>
                                 </Nav>
                             </Card.Body>
