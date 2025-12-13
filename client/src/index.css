@@ -141,3 +141,30 @@ a:hover {
   font-size: 0.7rem;
   border-radius: 4px;
 }
+
+/* --- SKELETON LOADER ANIMATION --- */
+@keyframes shimmer {
+  0% { background-position: -1000px 0; }
+  100% { background-position: 1000px 0; }
+}
+
+.skeleton {
+  animation: shimmer 2s infinite linear;
+  background: linear-gradient(to right, #f0f0f0 4%, #e0e0e0 25%, #f0f0f0 36%);
+  background-size: 1000px 100%;
+  border-radius: 8px;
+}
+
+.skeleton-text {
+  height: 16px;
+  margin-bottom: 8px;
+  width: 100%;
+}
+
+.skeleton-img {
+  height: 250px;
+  width: 100%;
+  border-radius: 12px 12px 0 0;
+}
+
+

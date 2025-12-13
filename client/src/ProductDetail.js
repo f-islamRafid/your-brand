@@ -1,21 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Container, Row, Col, Card, Button, Badge, Form, Spinner, Alert } from 'react-bootstrap';
-// 1. Import the hook
 import { useCart } from './CartContext';
+import toast from 'react-hot-toast'; // Import Toast Library
 
 function ProductDetail() {
     const { id } = useParams();
-    const { addToCart } = useCart(); // 2. Get the addToCart function
+    const { addToCart } = useCart();
 
     const [product, setProduct] = useState(null);
     const [variants, setVariants] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    
-    // 3. State to track which variant is selected
     const [selectedVariant, setSelectedVariant] = useState(null);
-    const [addedMessage, setAddedMessage] = useState(false); // For success message
 
     useEffect(() => {
         const fetchProduct = fetch(`/api/products/${id}`).then(res => {
@@ -39,19 +36,21 @@ function ProductDetail() {
             });
     }, [id]);
 
-    // 4. Handle Adding to Cart
     const handleAddToCart = () => {
-        // If variants exist but none selected, alert user
         if (variants.length > 0 && !selectedVariant) {
-            alert("Please select an option (Color/Size) first!");
+            toast.error("Please select an option (Color/Size) first!");
             return;
         }
 
         addToCart(product, selectedVariant);
-        
-        // Show success message briefly
-        setAddedMessage(true);
-        setTimeout(() => setAddedMessage(false), 3000);
+        // This is the new sleek notification:
+        toast.success(`${product.name} added to cart!`, {
+            style: {
+                borderRadius: '10px',
+                background: '#333',
+                color: '#fff',
+            },
+        }); 
     };
 
     if (loading) return <Container className="mt-5 text-center"><Spinner animation="border" /></Container>;
@@ -59,19 +58,12 @@ function ProductDetail() {
     if (!product) return <Container className="mt-5"><Alert variant="warning">Product not found</Alert></Container>;
 
     return (
-        <Container className="py-5">
-            <Link to="/" className="btn btn-outline-secondary mb-4">&larr; Back to Catalog</Link>
+        <Container className="py-5 animate__animated animate__fadeIn">
+            <Link to="/" className="btn btn-link text-muted mb-4 text-decoration-none">&larr; Back to Catalog</Link>
             
-            {/* Success Message Alert */}
-            {addedMessage && (
-                <Alert variant="success" className="fixed-top text-center" style={{ top: '10px', left: '20%', right: '20%', zIndex: 9999 }}>
-                    ✅ Added to Cart!
-                </Alert>
-            )}
-
             <Row>
                 <Col md={6} className="mb-4">
-                    <div style={{ border: '1px solid #dee2e6', borderRadius: '8px', overflow: 'hidden' }}>
+                    <div style={{ border: 'none', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 5px 15px rgba(0,0,0,0.08)' }}>
                         <img 
                             src={`/images/${id}.jpg`} 
                             alt={product.name} 
@@ -83,30 +75,39 @@ function ProductDetail() {
                 </Col>
 
                 <Col md={6}>
-                    <h1 className="display-5 fw-bold">{product.name}</h1>
-                    <div className="mb-3">
-                        <span className="h2 text-primary me-3">${product.base_price}</span>
-                        {product.is_active ? <Badge bg="success">In Stock</Badge> : <Badge bg="danger">Unavailable</Badge>}
+                    <h1 className="display-5 fw-bold mb-2">{product.name}</h1>
+                    <div className="mb-4 d-flex align-items-center">
+                        <span className="h2 text-primary me-3 mb-0">${product.base_price}</span>
+                        {product.is_active ? 
+                            <Badge bg="success" className="px-3 py-2">In Stock</Badge> : 
+                            <Badge bg="danger" className="px-3 py-2">Unavailable</Badge>
+                        }
                     </div>
-                    <p className="lead text-muted">{product.description}</p>
+                    
+                    <p className="lead text-muted mb-4" style={{fontSize: '1.1rem'}}>{product.description}</p>
+                    
+                    <div className="p-3 bg-light rounded mb-4">
+                        <strong>Material:</strong> {product.material}
+                    </div>
 
-                    <hr className="my-4" />
+                    <hr className="my-4" style={{opacity: 0.1}} />
 
-                    <h4 className="mb-3">Available Options</h4>
+                    <h5 className="mb-3">Select Options</h5>
                     {variants.length === 0 ? (
-                        <Alert variant="info">Standard model only.</Alert>
+                        <div className="text-muted fst-italic mb-3">Standard model only.</div>
                     ) : (
                         <div className="mb-4">
                             {variants.map(variant => (
                                 <Card 
                                     key={variant.variant_id} 
-                                    className={`mb-2 shadow-sm ${selectedVariant?.variant_id === variant.variant_id ? 'border-primary bg-light' : 'border-light'}`}
-                                    style={{ cursor: variant.stock_quantity > 0 ? 'pointer' : 'not-allowed', opacity: variant.stock_quantity > 0 ? 1 : 0.6 }}
+                                    className={`mb-2 shadow-sm ${selectedVariant?.variant_id === variant.variant_id ? 'border-primary bg-white ring-2' : 'border-0 bg-light'}`}
+                                    style={{ cursor: variant.stock_quantity > 0 ? 'pointer' : 'not-allowed', opacity: variant.stock_quantity > 0 ? 1 : 0.6, transition: 'all 0.2s' }}
                                     onClick={() => variant.stock_quantity > 0 && setSelectedVariant(variant)}
                                 >
-                                    <Card.Body className="d-flex justify-content-between align-items-center py-2">
+                                    <Card.Body className="d-flex justify-content-between align-items-center py-3">
                                         <div>
-                                            <strong>{variant.color} - {variant.size}</strong>
+                                            <strong className="d-block">{variant.color} - {variant.size}</strong>
+                                            <span className="text-muted small">SKU: {variant.sku}</span>
                                         </div>
                                         <div className="text-end">
                                             {variant.price_modifier > 0 && <span className="text-warning fw-bold me-3">+${variant.price_modifier}</span>}
@@ -118,13 +119,13 @@ function ProductDetail() {
                         </div>
                     )}
 
-                    <div className="d-grid gap-2 mt-4">
-                        {/* 5. Button triggers handleAddToCart */}
+                    <div className="d-grid gap-2 mt-5">
                         <Button 
                             variant="primary" 
                             size="lg" 
                             disabled={!product.is_active}
                             onClick={handleAddToCart}
+                            style={{padding: '15px'}}
                         >
                             {variants.length > 0 && !selectedVariant ? "Select an Option" : "Add to Cart"}
                         </Button>
