@@ -220,6 +220,41 @@ app.delete('/api/variants/:id', async (req, res) => {
     }
 });
 
+// furniture-brand-api/server.js
+
+// ... existing routes ...
+
+// NEW: Create a new Order
+app.post('/api/orders', async (req, res) => {
+    const { customer_name, customer_email, shipping_address, total_amount, items } = req.body;
+
+    try {
+        // 1. Insert the main Order
+        const orderResult = await pool.query(
+            'INSERT INTO orders (customer_name, customer_email, shipping_address, total_amount) VALUES ($1, $2, $3, $4) RETURNING order_id',
+            [customer_name, customer_email, shipping_address, total_amount]
+        );
+        
+        const newOrderId = orderResult.rows[0].order_id;
+
+        // 2. Insert all the Items for this order
+        // We use a loop to save each item into order_items
+        for (const item of items) {
+            await pool.query(
+                'INSERT INTO order_items (order_id, product_id, variant_id, quantity, price_at_purchase) VALUES ($1, $2, $3, $4, $5)',
+                [newOrderId, item.product_id, item.variant_id || null, item.quantity, item.price]
+            );
+        }
+
+        res.status(201).json({ message: 'Order placed successfully', orderId: newOrderId });
+
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+});
+
+// ... app.listen ...
 
 // --- Start Server ---
 app.listen(PORT, () => {
