@@ -57,7 +57,8 @@ function ProductList() {
     if (error) return <Alert variant="danger" className="m-5">Error loading catalog: {error}</Alert>;
 
     return (
-        <div className="py-4">
+        // 👇 ADDED ID="collection" HERE so the Hero Button can find this section
+        <div className="py-4" id="collection">
             <div className="text-center mb-5">
                 <h2 className="mb-3 fw-bold display-6">Featured Collection</h2>
                 <p className="text-muted" style={{ maxWidth: '600px', margin: '0 auto' }}>

@@ -1,237 +1,286 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Row, Col, Form, Button, Table, Alert, Badge, Nav, Modal } from 'react-bootstrap';
-import toast from 'react-hot-toast'; // We use toasts for professional feedback
+import { Container, Row, Col, Form, Button, Table, Alert, Badge, Nav, Tab, Card, InputGroup } from 'react-bootstrap';
+import toast from 'react-hot-toast';
 
-function Admin() {
-    const [view, setView] = useState('products');
-    const [products, setProducts] = useState([]);
-    const [orders, setOrders] = useState([]);
+// --- SUB-COMPONENT: PRODUCT MANAGER ---
+function ProductManager({ products, fetchProducts }) {
+    const [searchTerm, setSearchTerm] = useState('');
+    const [showForm, setShowForm] = useState(false);
     
-    // Add Product Form State
+    // Form State
     const [formData, setFormData] = useState({ name: '', description: '', base_price: '', material: '' });
     const [file, setFile] = useState(null);
-    
-    // --- NEW: Edit Modal State ---
-    const [showEditModal, setShowEditModal] = useState(false);
-    const [editData, setEditData] = useState({ product_id: '', name: '', description: '', base_price: '', material: '', is_active: true });
+    const [editMode, setEditMode] = useState(false);
+    const [editId, setEditId] = useState(null);
 
-    useEffect(() => {
-        fetchProducts();
-        fetchOrders();
-    }, []);
+    // Filter Logic
+    const filteredProducts = products.filter(p => 
+        p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        p.product_id.toString().includes(searchTerm)
+    );
 
-    const fetchProducts = () => {
-        fetch('/api/products').then(res => res.json()).then(data => setProducts(data));
-    };
-
-    const fetchOrders = () => {
-        fetch('/api/orders').then(res => res.json()).then(data => setOrders(data));
-    };
-
-    // --- ADD HANDLERS ---
     const handleChange = (e) => setFormData({...formData, [e.target.name]: e.target.value});
     const handleFileChange = (e) => setFile(e.target.files[0]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         const data = new FormData();
-        data.append('name', formData.name);
-        data.append('description', formData.description);
-        data.append('base_price', formData.base_price);
-        data.append('material', formData.material);
+        Object.keys(formData).forEach(key => data.append(key, formData[key]));
         if (file) data.append('image', file);
 
+        const url = editMode ? `/api/products/${editId}` : '/api/products';
+        const method = editMode ? 'PUT' : 'POST';
+
+        // PUT request usually needs JSON if we aren't updating the image, 
+        // but for simplicity we'll keep using FormData or switch based on backend needs.
+        // NOTE: Our previous PUT backend endpoint expected JSON, so let's handle that:
+        
         try {
-            const res = await fetch('/api/products', { method: 'POST', body: data });
+            let res;
+            if (editMode) {
+                // Update (JSON)
+                res = await fetch(url, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ...formData, is_active: true }) 
+                });
+            } else {
+                // Create (FormData for Image)
+                res = await fetch(url, { method: 'POST', body: data });
+            }
+
             if (res.ok) {
-                toast.success('Product Added!');
-                setFormData({ name: '', description: '', base_price: '', material: '' });
-                setFile(null);
+                toast.success(editMode ? "Product Updated!" : "Product Created!");
+                resetForm();
                 fetchProducts();
             } else {
-                toast.error('Failed to add product.');
+                toast.error("Operation Failed");
             }
-        } catch (err) { toast.error('Network Error'); }
+        } catch (err) { toast.error("Network Error"); }
     };
 
-    // --- NEW: DELETE HANDLER ---
     const handleDelete = async (id) => {
-        if (window.confirm("Are you sure you want to delete this product? This action cannot be undone.")) {
-            try {
-                const res = await fetch(`/api/products/${id}`, { method: 'DELETE' });
-                if (res.ok) {
-                    toast.success("Product Deleted");
-                    fetchProducts();
-                } else {
-                    const err = await res.json();
-                    toast.error(err.error || "Failed to delete");
-                }
-            } catch (err) {
-                toast.error("Error deleting product");
-            }
+        if (window.confirm("Delete this product?")) {
+            const res = await fetch(`/api/products/${id}`, { method: 'DELETE' });
+            if (res.ok) { toast.success("Deleted!"); fetchProducts(); }
+            else { toast.error("Cannot delete (might be in an order)"); }
         }
     };
 
-    // --- NEW: EDIT HANDLERS ---
-    const openEditModal = (product) => {
-        setEditData(product); // Fill the modal with this product's data
-        setShowEditModal(true);
+    const handleEdit = (product) => {
+        setFormData({ 
+            name: product.name, 
+            description: product.description, 
+            base_price: product.base_price, 
+            material: product.material 
+        });
+        setEditId(product.product_id);
+        setEditMode(true);
+        setShowForm(true);
+        window.scrollTo(0,0);
     };
 
-    const handleEditChange = (e) => {
-        // Handle checkbox vs text input
-        const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
-        setEditData({ ...editData, [e.target.name]: value });
-    };
-
-    const handleSaveEdit = async () => {
-        try {
-            const res = await fetch(`/api/products/${editData.product_id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(editData)
-            });
-
-            if (res.ok) {
-                toast.success("Product Updated!");
-                setShowEditModal(false);
-                fetchProducts();
-            } else {
-                toast.error("Failed to update");
-            }
-        } catch (err) {
-            toast.error("Update error");
-        }
+    const resetForm = () => {
+        setFormData({ name: '', description: '', base_price: '', material: '' });
+        setFile(null);
+        setEditMode(false);
+        setEditId(null);
+        setShowForm(false);
     };
 
     return (
-        <Container className="py-5 animate__animated animate__fadeIn">
+        <div className="animate__animated animate__fadeIn">
             <div className="d-flex justify-content-between align-items-center mb-4">
-                <h2>Admin Dashboard</h2>
-                <Nav variant="pills" activeKey={view} onSelect={(k) => setView(k)}>
-                    <Nav.Item><Nav.Link eventKey="products">Products</Nav.Link></Nav.Item>
-                    <Nav.Item><Nav.Link eventKey="orders">Orders</Nav.Link></Nav.Item>
-                </Nav>
+                <h3 className="mb-0">Inventory</h3>
+                <Button variant={showForm ? "secondary" : "primary"} onClick={() => showForm ? resetForm() : setShowForm(true)}>
+                    {showForm ? "Cancel" : "+ Add New Product"}
+                </Button>
             </div>
-            
-            {view === 'products' ? (
-                <Row>
-                    {/* Add Form (Left) */}
-                    <Col md={4} className="mb-4">
-                        <div className="p-4 border rounded bg-white shadow-sm sticky-top" style={{top: '100px'}}>
-                            <h4>Add Product</h4>
-                            <Form onSubmit={handleSubmit}>
-                                <Form.Group className="mb-3"><Form.Control type="text" name="name" placeholder="Name" value={formData.name} onChange={handleChange} required /></Form.Group>
-                                <Form.Group className="mb-3"><Form.Control type="number" name="base_price" placeholder="Price" value={formData.base_price} onChange={handleChange} required /></Form.Group>
-                                <Form.Group className="mb-3"><Form.Control type="text" name="material" placeholder="Material" value={formData.material} onChange={handleChange} /></Form.Group>
-                                <Form.Group className="mb-3"><Form.Control as="textarea" name="description" placeholder="Description" value={formData.description} onChange={handleChange} /></Form.Group>
-                                <Form.Group className="mb-3"><Form.Control type="file" accept=".jpg" onChange={handleFileChange} /></Form.Group>
-                                <Button variant="primary" type="submit" className="w-100">Add Product</Button>
-                            </Form>
-                        </div>
-                    </Col>
-                    
-                    {/* Product List (Right) */}
-                    <Col md={8}>
-                        <Table hover responsive className="bg-white shadow-sm rounded align-middle">
-                            <thead className="bg-light"><tr><th>Img</th><th>Name</th><th>Price</th><th>Status</th><th>Actions</th></tr></thead>
-                            <tbody>
-                                {products.map(p => (
-                                    <tr key={p.product_id}>
-                                        <td>
-                                            <img src={`/images/${p.product_id}.jpg`} alt="" width="40" height="40" style={{objectFit:'cover', borderRadius:'4px'}} 
-                                            onError={(e)=>{e.target.onerror=null;e.target.src="https://placehold.co/40"}}/>
-                                        </td>
-                                        <td>{p.name}</td>
-                                        <td>${p.base_price}</td>
-                                        <td>
-                                            <Badge bg={p.is_active ? 'success' : 'secondary'}>
-                                                {p.is_active ? 'Active' : 'Hidden'}
-                                            </Badge>
-                                        </td>
-                                        <td>
-                                            <Button variant="outline-secondary" size="sm" className="me-2" onClick={() => openEditModal(p)}>
-                                                ✏️ Edit
-                                            </Button>
-                                            <Button variant="outline-danger" size="sm" onClick={() => handleDelete(p.product_id)}>
-                                                🗑️
-                                            </Button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </Table>
-                    </Col>
-                </Row>
-            ) : (
-                /* Orders View */
-                <Row>
-                    <Col>
-                        {orders.length === 0 ? <Alert variant="info">No orders yet.</Alert> : 
-                        orders.map(order => (
-                            <div key={order.order_id} className="card mb-3 shadow-sm border-0">
-                                <div className="card-header bg-white d-flex justify-content-between align-items-center">
-                                    <div><strong>Order #{order.order_id}</strong> <span className="text-muted ms-2">{order.customer_name}</span></div>
-                                    <Badge bg="success">${order.total_amount}</Badge>
-                                </div>
-                                <div className="card-body">
-                                    {/* Order details... keeping brief for space */}
-                                    <span className="small text-muted">{new Date(order.created_at).toLocaleString()}</span>
-                                    <hr/>
-                                    {order.items && order.items.map((item, idx) => (
-                                        <div key={idx} className="d-flex justify-content-between small">
-                                            <span>{item.quantity}x {item.name}</span>
-                                            <span>${item.price_at_purchase}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        ))}
-                    </Col>
-                </Row>
+
+            {/* ADD / EDIT FORM (Collapsible) */}
+            {showForm && (
+                <Card className="mb-4 shadow-sm border-0 bg-light">
+                    <Card.Body>
+                        <h5 className="mb-3">{editMode ? `Edit Product #${editId}` : "New Product Details"}</h5>
+                        <Form onSubmit={handleSubmit}>
+                            <Row>
+                                <Col md={6}>
+                                    <Form.Group className="mb-3"><Form.Label>Name</Form.Label><Form.Control type="text" name="name" value={formData.name} onChange={handleChange} required /></Form.Group>
+                                    <Form.Group className="mb-3"><Form.Label>Price ($)</Form.Label><Form.Control type="number" name="base_price" value={formData.base_price} onChange={handleChange} required /></Form.Group>
+                                </Col>
+                                <Col md={6}>
+                                    <Form.Group className="mb-3"><Form.Label>Material</Form.Label><Form.Control type="text" name="material" value={formData.material} onChange={handleChange} /></Form.Group>
+                                    {!editMode && <Form.Group className="mb-3"><Form.Label>Image</Form.Label><Form.Control type="file" onChange={handleFileChange} /></Form.Group>}
+                                </Col>
+                                <Col md={12}>
+                                    <Form.Group className="mb-3"><Form.Label>Description</Form.Label><Form.Control as="textarea" name="description" value={formData.description} onChange={handleChange} /></Form.Group>
+                                    <Button type="submit" variant="success">{editMode ? "Save Changes" : "Create Product"}</Button>
+                                </Col>
+                            </Row>
+                        </Form>
+                    </Card.Body>
+                </Card>
             )}
 
-            {/* --- NEW: EDIT MODAL --- */}
-            <Modal show={showEditModal} onHide={() => setShowEditModal(false)}>
-                <Modal.Header closeButton>
-                    <Modal.Title>Edit Product</Modal.Title>
-                </Modal.Header>
-                <Modal.Body>
-                    <Form>
-                        <Form.Group className="mb-3">
-                            <Form.Label>Name</Form.Label>
-                            <Form.Control type="text" name="name" value={editData.name} onChange={handleEditChange} />
-                        </Form.Group>
-                        <Form.Group className="mb-3">
-                            <Form.Label>Price</Form.Label>
-                            <Form.Control type="number" name="base_price" value={editData.base_price} onChange={handleEditChange} />
-                        </Form.Group>
-                        <Form.Group className="mb-3">
-                            <Form.Label>Material</Form.Label>
-                            <Form.Control type="text" name="material" value={editData.material} onChange={handleEditChange} />
-                        </Form.Group>
-                        <Form.Group className="mb-3">
-                            <Form.Label>Description</Form.Label>
-                            <Form.Control as="textarea" rows={3} name="description" value={editData.description} onChange={handleEditChange} />
-                        </Form.Group>
-                        <Form.Group className="mb-3">
-                            <Form.Check 
-                                type="switch" 
-                                id="active-switch"
-                                label="Product Active (Visible in Store)" 
-                                name="is_active"
-                                checked={editData.is_active}
-                                onChange={handleEditChange}
-                            />
-                        </Form.Group>
-                    </Form>
-                </Modal.Body>
-                <Modal.Footer>
-                    <Button variant="secondary" onClick={() => setShowEditModal(false)}>Cancel</Button>
-                    <Button variant="primary" onClick={handleSaveEdit}>Save Changes</Button>
-                </Modal.Footer>
-            </Modal>
+            {/* SEARCH BAR */}
+            <InputGroup className="mb-3 shadow-sm">
+                <InputGroup.Text className="bg-white border-0">🔍</InputGroup.Text>
+                <Form.Control 
+                    placeholder="Search by name or ID..." 
+                    className="border-0"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                />
+            </InputGroup>
 
+            {/* PRODUCT TABLE */}
+            <Card className="border-0 shadow-sm">
+                <Table hover responsive className="mb-0 align-middle">
+                    <thead className="bg-light"><tr><th>Img</th><th>Name</th><th>Price</th><th>Stock</th><th>Actions</th></tr></thead>
+                    <tbody>
+                        {filteredProducts.map(p => (
+                            <tr key={p.product_id}>
+                                <td><img src={`/images/${p.product_id}.jpg`} alt="mini" width="40" height="40" className="rounded" onError={(e)=>{e.target.onerror=null;e.target.src="https://placehold.co/40"}}/></td>
+                                <td className="fw-bold">{p.name}</td>
+                                <td>${p.base_price}</td>
+                                <td><Badge bg={p.is_active ? 'success' : 'secondary'}>{p.is_active ? 'Active' : 'Hidden'}</Badge></td>
+                                <td>
+                                    <Button variant="link" className="text-decoration-none p-0 me-3" onClick={() => handleEdit(p)}>Edit</Button>
+                                    <Button variant="link" className="text-danger text-decoration-none p-0" onClick={() => handleDelete(p.product_id)}>Delete</Button>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </Table>
+            </Card>
+        </div>
+    );
+}
+
+// --- SUB-COMPONENT: ORDER MANAGER ---
+function OrderManager({ orders }) {
+    // Quick Stats
+    const totalRevenue = orders.reduce((sum, order) => sum + parseFloat(order.total_amount), 0).toFixed(2);
+    const totalOrders = orders.length;
+
+    return (
+        <div className="animate__animated animate__fadeIn">
+            <h3 className="mb-4">Order Management</h3>
+            
+            {/* STATS CARDS */}
+            <Row className="mb-4">
+                <Col md={4}>
+                    <Card className="border-0 shadow-sm text-white" style={{background: 'linear-gradient(135deg, #4A5D45 0%, #2C3531 100%)'}}>
+                        <Card.Body>
+                            <h6>Total Revenue</h6>
+                            <h3>${totalRevenue}</h3>
+                        </Card.Body>
+                    </Card>
+                </Col>
+                <Col md={4}>
+                    <Card className="border-0 shadow-sm bg-white">
+                        <Card.Body>
+                            <h6 className="text-muted">Total Orders</h6>
+                            <h3>{totalOrders}</h3>
+                        </Card.Body>
+                    </Card>
+                </Col>
+            </Row>
+
+            {orders.length === 0 ? <Alert variant="info">No orders received yet.</Alert> : (
+                <div className="d-grid gap-3">
+                    {orders.map(order => (
+                        <Card key={order.order_id} className="border-0 shadow-sm">
+                            <Card.Header className="bg-white d-flex justify-content-between align-items-center py-3">
+                                <div>
+                                    <strong>Order #{order.order_id}</strong>
+                                    <span className="text-muted mx-2">|</span>
+                                    <span className="text-primary fw-bold">{order.customer_name}</span>
+                                </div>
+                                <div className="text-end">
+                                    <span className="text-muted small me-3">{new Date(order.created_at).toLocaleDateString()}</span>
+                                    <Badge bg="warning" text="dark" className="me-2">Pending</Badge>
+                                    <strong className="fs-5">${order.total_amount}</strong>
+                                </div>
+                            </Card.Header>
+                            <Card.Body>
+                                <p className="small text-muted mb-3">
+                                    <strong>Ship To:</strong> {order.shipping_address} <br/>
+                                    <strong>Email:</strong> {order.customer_email}
+                                </p>
+                                <Table size="sm" borderless className="mb-0">
+                                    <thead className="text-muted small border-bottom"><tr><th>Item</th><th>Qty</th><th className="text-end">Price</th></tr></thead>
+                                    <tbody>
+                                        {order.items && order.items.map((item, idx) => (
+                                            <tr key={idx}>
+                                                <td>{item.name}</td>
+                                                <td>x{item.quantity}</td>
+                                                <td className="text-end">${item.price_at_purchase}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </Table>
+                            </Card.Body>
+                        </Card>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}
+
+// --- MAIN ADMIN LAYOUT ---
+function Admin() {
+    const [products, setProducts] = useState([]);
+    const [orders, setOrders] = useState([]);
+
+    useEffect(() => {
+        fetchProducts();
+        fetchOrders();
+    }, []);
+
+    const fetchProducts = () => fetch('/api/products').then(res => res.json()).then(setProducts);
+    const fetchOrders = () => fetch('/api/orders').then(res => res.json()).then(setOrders);
+
+    return (
+        <Container fluid className="py-4 bg-light" style={{minHeight: '100vh'}}>
+            <Tab.Container id="admin-tabs" defaultActiveKey="products">
+                <Row>
+                    {/* LEFT SIDEBAR */}
+                    <Col md={3} lg={2} className="mb-4">
+                        <Card className="border-0 shadow-sm sticky-top" style={{top: '100px'}}>
+                            <Card.Body className="p-2">
+                                <div className="text-center py-3 border-bottom mb-2">
+                                    <h5 className="fw-bold text-success">Admin Panel</h5>
+                                </div>
+                                <Nav variant="pills" className="flex-column">
+                                    <Nav.Item>
+                                        <Nav.Link eventKey="products" className="mb-1 fw-bold text-dark">📦 Products</Nav.Link>
+                                    </Nav.Item>
+                                    <Nav.Item>
+                                        <Nav.Link eventKey="orders" className="mb-1 fw-bold text-dark">📋 Orders</Nav.Link>
+                                    </Nav.Item>
+                                    <Nav.Item>
+                                        <Nav.Link href="/" className="mt-3 text-muted small">&larr; Back to Shop</Nav.Link>
+                                    </Nav.Item>
+                                </Nav>
+                            </Card.Body>
+                        </Card>
+                    </Col>
+
+                    {/* RIGHT CONTENT AREA */}
+                    <Col md={9} lg={10}>
+                        <Tab.Content>
+                            <Tab.Pane eventKey="products">
+                                <ProductManager products={products} fetchProducts={fetchProducts} />
+                            </Tab.Pane>
+                            <Tab.Pane eventKey="orders">
+                                <OrderManager orders={orders} />
+                            </Tab.Pane>
+                        </Tab.Content>
+                    </Col>
+                </Row>
+            </Tab.Container>
         </Container>
     );
 }
