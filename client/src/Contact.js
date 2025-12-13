@@ -28,46 +28,72 @@ function Contact() {
                         <Card.Body className="p-4">
                             <h3 className="mb-4" style={{ color: '#4A5D45' }}>Contact Information</h3>
                             
+                            {/* 1. REAL ADDRESS */}
                             <div className="d-flex align-items-start mb-4">
                                 <div className="me-3" style={{ fontSize: '1.5rem' }}>📍</div>
                                 <div>
                                     <h6 className="fw-bold mb-1">Our Showroom</h6>
-                                    <p className="text-muted mb-0">123 Furniture Lane, Design District<br />New York, NY 10012</p>
+                                    <p className="text-muted mb-0">
+                                        {/* CHANGE THIS TO YOUR REAL ADDRESS */}
+                                        123 Real Street Name, Suite 100<br />
+                                        City Name, State, Zip Code
+                                    </p>
                                 </div>
                             </div>
 
+                            {/* 2. REAL PHONE NUMBER */}
                             <div className="d-flex align-items-start mb-4">
                                 <div className="me-3" style={{ fontSize: '1.5rem' }}>📞</div>
                                 <div>
                                     <h6 className="fw-bold mb-1">Phone</h6>
-                                    <p className="text-muted mb-0">+1 (555) 123-4567</p>
+                                    <p className="text-muted mb-0">
+                                        {/* CHANGE THIS TO YOUR REAL PHONE */}
+                                        +1 (555) 000-0000
+                                    </p>
                                     <small className="text-muted">Mon-Fri: 9am - 6pm EST</small>
                                 </div>
                             </div>
 
+                            {/* 3. REAL EMAIL */}
                             <div className="d-flex align-items-start mb-4">
                                 <div className="me-3" style={{ fontSize: '1.5rem' }}>✉️</div>
                                 <div>
                                     <h6 className="fw-bold mb-1">Email</h6>
-                                    <p className="text-muted mb-0">support@homedecor.com</p>
+                                    <p className="text-muted mb-0">
+                                        {/* CHANGE THIS TO YOUR REAL EMAIL */}
+                                        contact@yourrealdomain.com
+                                    </p>
                                 </div>
                             </div>
 
                             <hr style={{ opacity: 0.1 }} />
                             
+                            {/* 4. SOCIAL MEDIA LINKS */}
                             <div className="mt-4">
                                 <h6 className="fw-bold mb-2">Follow Us</h6>
-                                <div className="d-flex gap-3 text-muted" style={{ fontSize: '1.2rem' }}>
-                                    <span style={{ cursor: 'pointer' }}>📷</span>
-                                    <span style={{ cursor: 'pointer' }}>📘</span>
-                                    <span style={{ cursor: 'pointer' }}>📌</span>
+                                <div className="d-flex gap-3 text-muted" style={{ fontSize: '1.5rem' }}>
+                                    
+                                    {/* INSTAGRAM */}
+                                    <a href="https://instagram.com/YOUR_USERNAME" target="_blank" rel="noreferrer" style={{ textDecoration: 'none', color: 'inherit' }}>
+                                        📷
+                                    </a>
+                                    
+                                    {/* FACEBOOK */}
+                                    <a href="https://facebook.com/YOUR_PAGE_NAME" target="_blank" rel="noreferrer" style={{ textDecoration: 'none', color: 'inherit' }}>
+                                        📘
+                                    </a>
+                                    
+                                    {/* PINTEREST */}
+                                    <a href="https://pinterest.com/YOUR_USERNAME" target="_blank" rel="noreferrer" style={{ textDecoration: 'none', color: 'inherit' }}>
+                                        📌
+                                    </a>
                                 </div>
                             </div>
                         </Card.Body>
                     </Card>
                 </Col>
 
-                {/* Right Column: Message Form */}
+                {/* Right Column: Message Form (Unchanged) */}
                 <Col md={6}>
                     <Card className="border-0 shadow-lg">
                         <Card.Body className="p-4 p-md-5">
