@@ -36,3 +36,45 @@
     transform: rotate(360deg);
   }
 }
+
+/* --- HERO BUTTON STYLING (Step 103) --- */
+
+.hero-browse-btn {
+    /* Base style: Dark background with a subtle border */
+    background-color: #384236; /* Dark olive color to match header */
+    color: white;
+    border: 2px solid #A67B5B; /* Rustic gold/olive border for elegance */
+    padding: 15px 40px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    border-radius: 50px; /* Highly rounded corners */
+    transition: all 0.3s ease;
+}
+
+.hero-browse-btn:hover {
+    /* Hover effect: Lighten background and border slightly */
+    background-color: #4A5D45; 
+    border-color: white; /* Contrast border on hover */
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.4); /* Subtle lift effect */
+    transform: translateY(-2px);
+}
+
+.hero-browse-btn:active {
+    /* Click effect */
+    background-color: #2C3531 !important; 
+    border-color: #A67B5B !important; 
+    transform: translateY(0);
+}
+
+/* Ensure the hero container uses the full image height */
+.hero-section {
+    position: relative;
+    height: 70vh; /* Adjust height for impact */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 50px;
+    overflow: hidden;
+    border-radius: 0 0 10px 10px; /* Optional: adds a subtle curve to the bottom edge */
+}
+

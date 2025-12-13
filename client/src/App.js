@@ -1,247 +1,274 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
-import { Navbar, Container, Nav, Badge, Row, Col, Form } from 'react-bootstrap';
-import { Toaster } from 'react-hot-toast'; 
-import logo from './assets/logo.png'; 
-
-import { CartProvider, useCart } from './CartContext';
-
-// Pages
-import ProductList from './ProductList';
-import ProductDetail from './ProductDetail';
-import Cart from './Cart'; 
-import Checkout from './Checkout'; 
-import Admin from './Admin';
-import Contact from './Contact'; 
-import Login from './Login';
-import ProtectedRoute from './ProtectedRoute';
-
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { Navbar, Nav, Container, Row, Col, Card, Button, InputGroup, Form, Badge, Spinner } from 'react-bootstrap';
+import { Toaster } from 'react-hot-toast';
 import './App.css'; 
 
-// --- COMPONENT: NAVIGATION ---
-function NavBarContent() {
-    const { cartCount } = useCart();
+// Components
+import Admin from './Admin';
+import ProductDetail from './ProductDetail';
+import Cart from './Cart';
+import Checkout from './Checkout';
+import Footer from './Footer';
+
+// Context
+import { CartProvider } from './CartContext';
+
+// Mock Auth Check
+const isAuthenticated = () => localStorage.getItem('isAdmin') === 'true';
+
+// --- MAIN COMPONENTS ---
+
+// Navbar Component
+function Header({ totalItems }) {
+    const handleLogout = () => {
+        localStorage.removeItem('isAdmin');
+        window.location.href = '/'; 
+    };
+
     return (
-        <Navbar variant="dark" expand="lg" className="navbar-custom sticky-top">
-          <Container>
-            <Navbar.Brand as={Link} to="/" className="d-flex align-items-center">
-              <img
-                alt="Home Decor Logo"
-                src={logo}
-                width="55" 
-                height="55" 
-                className="d-inline-block align-top me-3 animate__animated animate__rotateIn" 
-                style={{
-                    borderRadius: '50%', 
-                    border: '3px solid #A67B5B', 
-                    boxShadow: '0 4px 8px rgba(0,0,0,0.3)', 
-                    padding: '2px', 
-                    backgroundColor: 'white'
-                }}
-              />
-              
-              <div className="d-flex flex-column">
-                  <span style={{ 
-                      fontFamily: "'Playfair Display', serif", 
-                      fontWeight: '700', 
-                      fontSize: '1.8rem', 
-                      letterSpacing: '1.5px', 
-                      color: '#ffffff',
-                      textShadow: '0 2px 4px rgba(0,0,0,0.5)', 
-                      lineHeight: '1'
-                  }}>
-                    Home Decor
-                  </span>
-                  <span style={{
-                      fontSize: '0.75rem',
-                      letterSpacing: '3px',
-                      textTransform: 'uppercase',
-                      color: '#A67B5B', 
-                      fontWeight: '500'
-                  }}>
-                      Furniture & Design
-                  </span>
-              </div>
-            </Navbar.Brand>
-
-            <Navbar.Toggle aria-controls="basic-navbar-nav" />
-            <Navbar.Collapse id="basic-navbar-nav">
-              
-              <Form className="d-flex mx-auto my-2 my-lg-0" style={{ maxWidth: '400px', width: '100%' }}>
-                <Form.Control
-                  type="search"
-                  placeholder="Search for furniture..."
-                  className="me-2 rounded-pill border-0 shadow-sm"
-                  aria-label="Search"
-                  style={{ background: 'rgba(255,255,255,0.15)', color: 'white', backdropFilter: 'blur(5px)' }}
-                />
-              </Form>
-
-              <Nav className="ms-auto">
-                <Nav.Link as={Link} to="/" className="mx-2 text-uppercase fw-bold" style={{fontSize: '0.9rem', letterSpacing: '1px'}}>Shop</Nav.Link>
-                <Nav.Link as={Link} to="/admin" className="mx-2 text-uppercase fw-bold" style={{fontSize: '0.9rem', letterSpacing: '1px'}}>Admin</Nav.Link>
-                <Nav.Link as={Link} to="/cart" className="mx-2 position-relative text-uppercase fw-bold" style={{fontSize: '0.9rem', letterSpacing: '1px'}}>
-                    Cart 
-                    {cartCount > 0 && 
-                      <Badge bg="warning" text="dark" pill className="position-absolute top-0 start-100 translate-middle shadow-sm">
-                        {cartCount}
-                      </Badge>
-                    }
-                </Nav.Link>
-                <Nav.Link as={Link} to="/contact" className="mx-2 text-uppercase fw-bold" style={{fontSize: '0.9rem', letterSpacing: '1px'}}>Contact</Nav.Link>
-              </Nav>
-            </Navbar.Collapse>
-          </Container>
+        <Navbar expand="lg" style={{ backgroundColor: '#4A5D45' }} variant="dark" sticky="top" className="shadow-sm">
+            <Container>
+                <Navbar.Brand as={Link} to="/" className="d-flex align-items-center">
+                    <img src="/logo.png" alt="Home Decor Logo" height="30" className="me-2" />
+                    <span className="fs-4 fw-bold">Home Decor</span>
+                </Navbar.Brand>
+                <Navbar.Toggle aria-controls="basic-navbar-nav" />
+                <Navbar.Collapse id="basic-navbar-nav">
+                    <Form className="d-flex mx-auto w-50">
+                        <InputGroup>
+                            <Form.Control
+                                type="search"
+                                placeholder="Search for furniture..."
+                                aria-label="Search"
+                                className="border-0"
+                                style={{ backgroundColor: '#62765d' }}
+                            />
+                            <Button variant="outline-light">Search</Button>
+                        </InputGroup>
+                    </Form>
+                    <Nav className="ms-auto fw-bold">
+                        <Nav.Link as={Link} to="/shop">SHOP</Nav.Link>
+                        {isAuthenticated() ? (
+                            <>
+                                <Nav.Link as={Link} to="/admin">ADMIN</Nav.Link>
+                                <Nav.Link onClick={handleLogout} style={{cursor: 'pointer'}}>LOGOUT</Nav.Link>
+                            </>
+                        ) : (
+                            <Nav.Link as={Link} to="/admin">ADMIN</Nav.Link>
+                        )}
+                        <Nav.Link as={Link} to="/cart" className="position-relative">
+                            CART 
+                            {totalItems > 0 && (
+                                <Badge pill bg="danger" className="position-absolute top-0 start-100 translate-middle">
+                                    {totalItems}
+                                </Badge>
+                            )}
+                        </Nav.Link>
+                        <Nav.Link as={Link} to="/contact">CONTACT</Nav.Link>
+                    </Nav>
+                </Navbar.Collapse>
+            </Container>
         </Navbar>
     );
 }
 
-// --- COMPONENT: HERO SECTION ---
-function HeroSection() {
-    const location = useLocation();
-    if (location.pathname !== '/') return null;
-
-    const scrollToCollection = () => {
-        const element = document.getElementById('collection');
-        if (element) element.scrollIntoView({ behavior: 'smooth' });
-    };
-
-    return (
-        <div style={{
-            background: 'linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), url("https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?q=80&w=2000&auto=format&fit=crop")',
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            color: 'white',
-            padding: '100px 0',
-            textAlign: 'center',
-            marginBottom: '40px',
-            borderRadius: '0 0 20px 20px'
-        }}>
-            <Container>
-                <h1 className="display-3 fw-bold mb-3 animate__animated animate__fadeInDown" style={{color: 'white'}}>
-                    Elevate Your Living Space
-                </h1>
-                <p className="lead mb-4 animate__animated animate__fadeInUp" style={{maxWidth: '600px', margin: '0 auto', animationDelay: '0.2s'}}>
-                    Discover our handcrafted collection of premium furniture. 
-                    Designed for comfort, built for style.
-                </p>
-                <button 
-                    onClick={scrollToCollection}
-                    className="btn btn-hero-cta animate__animated animate__fadeInUp" 
-                    style={{ animationDelay: '0.4s' }}
-                >
-                    Browse Collection
-                </button>
-            </Container>
-        </div>
-    );
-}
-
-// --- COMPONENT: TRUST SIGNALS ---
-function TrustSection() {
-    const location = useLocation();
-    if (location.pathname !== '/') return null;
-
+// Home Page Component
+function Home({ products }) {
+    
+    // Feature Highlights Data
     const features = [
-        // 👇 CURRENCY UPDATED HERE
-        { icon: "🚚", title: "Free Shipping", text: "On all orders over ৳5000" },
-        { icon: "🛡️", title: "Secure Payment", text: "100% protected transactions" },
-        { icon: "✨", title: "Quality Material", text: "Hand-picked premium wood" },
-        { icon: "↩️", title: "Easy Returns", text: "30-day money back guarantee" },
+        { icon: '🚚', title: 'FREE SHIPPING', subtitle: 'On all orders over ৳5000' },
+        { icon: '🔒', title: 'SECURE PAYMENT', subtitle: '100% protected transactions' },
+        { icon: '✨', title: 'QUALITY MATERIAL', subtitle: 'Hand-picked premium wood' },
+        { icon: '🔄', title: 'EASY RETURNS', subtitle: '30-day money-back guarantee' }
     ];
 
     return (
-        <div style={{ backgroundColor: '#fff', marginTop: '-40px', padding: '40px 0', position: 'relative', zIndex: 10, boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
-            <Container>
-                <Row>
-                    {features.map((f, i) => (
-                        <Col key={i} md={3} sm={6} className="text-center mb-3 mb-md-0 animate__animated animate__fadeInUp" style={{ animationDelay: `${i * 0.1}s` }}>
-                            <div style={{ fontSize: '2.5rem', marginBottom: '10px' }}>{f.icon}</div>
-                            <h6 style={{ fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px' }}>{f.title}</h6>
-                            <p className="text-muted small mb-0">{f.text}</p>
+        <>
+            {/* HERO BANNER SECTION */}
+            <div className="hero-section" style={{ 
+                backgroundImage: 'url(/hero-bg.jpg)', 
+                backgroundSize: 'cover', 
+                backgroundPosition: 'center center',
+            }}>
+                <div className="overlay"></div>
+                
+                {/* HERO CONTENT - MODIFIED BUTTON HERE */}
+                <div className="hero-content text-center text-white">
+                    <h1 className="display-3 fw-bolder mb-4" style={{ fontFamily: 'Playfair Display, serif' }}>
+                        Elevate Your Living Space
+                    </h1>
+                    <p className="lead mb-5 px-3">
+                        Discover our handcrafted collection of premium furniture. Designed for comfort, built for style.
+                    </p>
+                    
+                    <Button 
+                        variant="outline-light" 
+                        size="lg" 
+                        as={Link} 
+                        to="/shop"
+                        className="hero-browse-btn" // Applies the stylish CSS
+                    >
+                        BROWSE COLLECTION
+                    </Button>
+                </div>
+            </div>
+
+            {/* FEATURE HIGHLIGHTS */}
+            <Container className="my-5">
+                <Row className="text-center">
+                    {features.map((feature, index) => (
+                        <Col md={3} key={index} className="mb-4">
+                            <div className="p-3">
+                                <span style={{ fontSize: '2.5rem' }}>{feature.icon}</span>
+                                <h5 className="mt-2 fw-bold">{feature.title}</h5>
+                                <p className="text-muted small">{feature.subtitle}</p>
+                            </div>
                         </Col>
                     ))}
                 </Row>
+                <hr className="my-5"/>
             </Container>
-        </div>
-    );
-}
 
-// --- COMPONENT: FOOTER ---
-function Footer() {
-    return (
-        <footer style={{ backgroundColor: '#2C3531', color: '#8F9779', marginTop: 'auto', paddingTop: '60px', paddingBottom: '30px' }}>
-            <Container>
-                <Row>
-                    <Col md={4} className="mb-4">
-                        <h5 className="text-white mb-3">Home Decor</h5>
-                        <p className="small">
-                            Creating beautiful spaces since 2004. We believe in quality materials and timeless design.
-                        </p>
-                    </Col>
-                    <Col md={4} className="mb-4">
-                        <h5 className="text-white mb-3">Quick Links</h5>
-                        <ul className="list-unstyled">
-                            <li><Link to="/" className="text-decoration-none text-muted">Shop All</Link></li>
-                            <li><Link to="/contact" className="text-decoration-none text-muted">Contact Us</Link></li>
-                            <li><Link to="/cart" className="text-decoration-none text-muted">My Cart</Link></li>
-                        </ul>
-                    </Col>
-                    <Col md={4} className="mb-4">
-                        <h5 className="text-white mb-3">Newsletter</h5>
-                        <div className="input-group mb-3">
-                            <input type="text" className="form-control" placeholder="Your email" style={{background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white'}} />
-                            <button className="btn btn-outline-light" type="button">Subscribe</button>
-                        </div>
-                    </Col>
+            {/* PRODUCT LISTING (SHOP PREVIEW) */}
+            <Container className="mb-5">
+                <h2 className="text-center mb-5 fw-bold" style={{ fontFamily: 'Playfair Display, serif' }}>Featured Products</h2>
+                <Row xs={1} md={2} lg={4} className="g-4">
+                    {products.slice(0, 4).map(product => ( // Show first 4 products
+                        <ProductCard key={product.product_id} product={product} />
+                    ))}
                 </Row>
-                <hr style={{borderColor: 'rgba(255,255,255,0.1)'}} />
-                <div className="text-center small">
-                    &copy; 2025 Home Decor Inc. All rights reserved. 
-                    <span className="mx-2">|</span> 
-                    <span style={{ color: '#fff', fontWeight: 'bold', letterSpacing: '1px' }}>Built by RAFID</span>
+                <div className="text-center mt-5">
+                    <Button as={Link} to="/shop" variant="outline-dark" size="lg" className="rounded-pill px-5">View All</Button>
                 </div>
             </Container>
-        </footer>
+        </>
     );
 }
 
+// Product Card Component (used in Home and Shop)
+function ProductCard({ product }) {
+    const { addToCart } = useCart();
+
+    const handleQuickAdd = (e) => {
+        e.preventDefault();
+        addToCart(product);
+    };
+
+    return (
+        <Col>
+            <Card className="h-100 shadow-sm border-0 product-card">
+                <Link to={`/product/${product.product_id}`}>
+                    <div className="product-image-container-small">
+                        <img 
+                            src={`/images/${product.product_id}.jpg`} 
+                            alt={product.name} 
+                            className="card-img-top img-fluid" 
+                            onError={(e) => { e.target.onerror = null; e.target.src = "https://placehold.co/400x300?text=No+Image"; }}
+                        />
+                    </div>
+                </Link>
+                <Card.Body className="d-flex flex-column">
+                    <Card.Title className="fw-bold mb-1">{product.name}</Card.Title>
+                    <div className="d-flex justify-content-between align-items-center mb-2">
+                        <span className="fs-5 text-muted">৳{product.base_price}</span>
+                        <Badge bg={product.is_active ? 'success' : 'danger'}>
+                            {product.is_active ? 'In Stock' : 'Hidden'}
+                        </Badge>
+                    </div>
+                    <Card.Text className="text-muted small mb-3 flex-grow-1">
+                        {product.description ? product.description.substring(0, 50) + '...' : 'No description provided.'}
+                    </Card.Text>
+                    
+                    <div className="mt-auto d-grid gap-2">
+                        <Button as={Link} to={`/product/${product.product_id}`} variant="outline-dark" className="rounded-pill">
+                            View Details
+                        </Button>
+                    </div>
+                </Card.Body>
+            </Card>
+        </Col>
+    );
+}
+
+// Shop Page Component
+function Shop({ products }) {
+    return (
+        <Container className="py-5">
+            <h1 className="text-center mb-5 fw-bold" style={{ fontFamily: 'Playfair Display, serif' }}>All Products</h1>
+            <Row xs={1} md={2} lg={4} className="g-4">
+                {products.map(product => (
+                    <ProductCard key={product.product_id} product={product} />
+                ))}
+            </Row>
+            {products.length === 0 && (
+                <Alert variant="info" className="text-center">No active products found in the catalog.</Alert>
+            )}
+        </Container>
+    );
+}
+
+// Main App Component
 function App() {
-  return (
-    <CartProvider>
-        <Router>
-          <div className="App d-flex flex-column min-vh-100">
-            <Toaster position="top-center" reverseOrder={false} />
+    const [products, setProducts] = useState([]);
+    const [loading, setLoading] = useState(true);
 
-            <NavBarContent />
-            <HeroSection />
-            <TrustSection />
+    const fetchProducts = async () => {
+        try {
+            const res = await fetch('/api/products');
+            const data = await res.json();
+            setProducts(data);
+            setLoading(false);
+        } catch (err) {
+            console.error("Failed to fetch products:", err);
+            setLoading(false);
+        }
+    };
 
-            <Container className="flex-grow-1">
-              <Routes>
-                <Route path="/" element={<ProductList />} />
-                <Route path="/product/:id" element={<ProductDetail />} />
-                <Route path="/cart" element={<Cart />} />
-                <Route path="/checkout" element={<Checkout />} />
-                <Route path="/contact" element={<Contact />} />
+    useEffect(() => {
+        fetchProducts();
+    }, []);
 
-                <Route path="/login" element={<Login />} />
-                <Route 
-                  path="/admin" 
-                  element={
-                    <ProtectedRoute>
-                      <Admin />
-                    </ProtectedRoute>
-                  } 
-                />
-              </Routes>
-            </Container>
+    if (loading) {
+        return (
+            <div className="d-flex justify-content-center align-items-center" style={{ height: '100vh' }}>
+                <Spinner animation="border" />
+            </div>
+        );
+    }
 
+    return (
+        <CartProvider>
+            <Router>
+                <AppContent products={products} fetchProducts={fetchProducts} />
+            </Router>
+        </CartProvider>
+    );
+}
+
+// AppContent handles routing and context
+function AppContent({ products, fetchProducts }) {
+    const { totalItems } = useCart();
+
+    return (
+        <div id="app-container">
+            <Toaster />
+            <Header totalItems={totalItems} />
+            <main>
+                <Routes>
+                    <Route path="/" element={<Home products={products} />} />
+                    <Route path="/shop" element={<Shop products={products} />} />
+                    <Route path="/product/:id" element={<ProductDetail />} />
+                    <Route path="/cart" element={<Cart />} />
+                    <Route path="/checkout" element={<Checkout />} />
+                    <Route path="/admin" element={<Admin fetchProducts={fetchProducts} />} />
+                    <Route path="/contact" element={<Container className='py-5'><Alert variant="info">Contact Page Placeholder</Alert></Container>} />
+                </Routes>
+            </main>
             <Footer />
-          </div>
-        </Router>
-    </CartProvider>
-  );
+        </div>
+    );
 }
 
 export default App;

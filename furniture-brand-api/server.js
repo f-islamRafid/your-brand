@@ -1,91 +1,70 @@
 const express = require('express');
 const cors = require('cors');
 const { Pool } = require('pg');
-const multer = require('multer'); // Import Multer
-const path = require('path');
-const fs = require('fs'); // Import File System
-require('dotenv').config();
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = 5000;
 
+// PostgreSQL Connection Pool
+const pool = new Pool({
+    user: 'myuser',
+    host: 'furniture-db-pg',
+    database: 'furniture_db',
+    password: 'mypassword',
+    port: 5432,
+});
+
+// Middleware
 app.use(cors());
 app.use(express.json());
 
-// --- CONFIGURING IMAGE UPLOAD ---
-// We will save files initially to a temp folder, then rename them
-const upload = multer({ dest: path.join(__dirname, '../client/public/images/') });
-
-const pool = new Pool({
-    user: process.env.DB_USER,
-    host: process.env.DB_HOST,
-    database: process.env.DB_DATABASE,
-    password: process.env.DB_PASSWORD,
-    port: process.env.DB_PORT,
-});
-
 // --- ROUTES ---
 
+// 1. Get All Products (only active ones for the shop)
 app.get('/api/products', async (req, res) => {
     try {
-        const allProducts = await pool.query("SELECT * FROM products ORDER BY product_id ASC");
-        res.json(allProducts.rows);
+        const result = await pool.query("SELECT * FROM products WHERE is_active = true ORDER BY product_id ASC");
+        res.json(result.rows);
     } catch (err) {
         console.error(err.message);
         res.status(500).send("Server Error");
     }
 });
 
+// 2. Get Single Product
 app.get('/api/products/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const product = await pool.query("SELECT * FROM products WHERE product_id = $1", [id]);
-        if (product.rows.length === 0) return res.status(404).json({ message: "Product not found" });
-        res.json(product.rows[0]);
-    } catch (err) {
-        console.error(err.message);
-        res.status(500).send("Server Error");
-    }
-});
-
-app.get('/api/variants', async (req, res) => {
-    try {
-        const allVariants = await pool.query("SELECT * FROM variants");
-        res.json(allVariants.rows);
-    } catch (err) {
-        console.error(err.message);
-        res.status(500).send("Server Error");
-    }
-});
-
-// --- NEW: CREATE PRODUCT WITH IMAGE ---
-// 'upload.single('image')' looks for a form field named 'image'
-app.post('/api/products', upload.single('image'), async (req, res) => {
-    try {
-        const { name, description, base_price, material } = req.body;
-        
-        // 1. Insert Data into Database
-        const newProduct = await pool.query(
-            "INSERT INTO products (name, description, base_price, material, is_active) VALUES ($1, $2, $3, $4, true) RETURNING *",
-            [name, description, base_price, material]
-        );
-
-        const newId = newProduct.rows[0].product_id;
-
-        // 2. Handle the Image File (if one was uploaded)
-        if (req.file) {
-            // The file is currently saved with a random name (e.g., "a3f9...")
-            const oldPath = req.file.path;
-            
-            // We want to rename it to "ID.jpg" (e.g., "3.jpg")
-            const targetPath = path.join(__dirname, `../client/public/images/${newId}.jpg`);
-
-            // Rename the file
-            fs.rename(oldPath, targetPath, err => {
-                if (err) console.error("Error renaming file:", err);
-            });
+        const result = await pool.query("SELECT * FROM products WHERE product_id = $1", [id]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: "Product not found" });
         }
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send("Server Error");
+    }
+});
 
+// 3. Admin: Get All Products (active and archived)
+app.get('/api/admin/products', async (req, res) => {
+    try {
+        const result = await pool.query("SELECT * FROM products ORDER BY product_id ASC");
+        res.json(result.rows);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send("Server Error");
+    }
+});
+
+// 4. Admin: Add New Product
+app.post('/api/products', async (req, res) => {
+    try {
+        const { name, base_price, description, material } = req.body;
+        const newProduct = await pool.query(
+            "INSERT INTO products (name, base_price, description, material) VALUES($1, $2, $3, $4) RETURNING *",
+            [name, base_price, description, material]
+        );
         res.json(newProduct.rows[0]);
     } catch (err) {
         console.error(err.message);
@@ -93,114 +72,23 @@ app.post('/api/products', upload.single('image'), async (req, res) => {
     }
 });
 
-// NEW: Create Order Endpoint (from previous steps)
-app.post('/api/orders', async (req, res) => {
-    const { customer_name, customer_email, shipping_address, total_amount, items } = req.body;
-    try {
-        const orderResult = await pool.query(
-            'INSERT INTO orders (customer_name, customer_email, shipping_address, total_amount) VALUES ($1, $2, $3, $4) RETURNING order_id',
-            [customer_name, customer_email, shipping_address, total_amount]
-        );
-        const newOrderId = orderResult.rows[0].order_id;
-        for (const item of items) {
-            await pool.query(
-                'INSERT INTO order_items (order_id, product_id, variant_id, quantity, price_at_purchase) VALUES ($1, $2, $3, $4, $5)',
-                [newOrderId, item.product_id, item.variant_id || null, item.quantity, item.price]
-            );
-        }
-        res.status(201).json({ message: 'Order placed successfully', orderId: newOrderId });
-    } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
-    }
-});
-
-// furniture-brand-api/server.js
-
-// ... existing routes ...
-
-// NEW: Get All Orders (For Admin Dashboard)
-app.get('/api/orders', async (req, res) => {
-    try {
-        // We join 'orders' with 'order_items' to get the full picture
-        // This is a slightly complex query to group items under their order
-        const ordersQuery = await pool.query("SELECT * FROM orders ORDER BY created_at DESC");
-        const orders = ordersQuery.rows;
-
-        // For each order, fetch its items
-        for (let order of orders) {
-            const itemsQuery = await pool.query(
-                `SELECT oi.*, p.name 
-                 FROM order_items oi 
-                 JOIN products p ON oi.product_id = p.product_id 
-                 WHERE oi.order_id = $1`,
-                [order.order_id]
-            );
-            order.items = itemsQuery.rows;
-        }
-
-        res.json(orders);
-    } catch (err) {
-        console.error(err.message);
-        res.status(500).send("Server Error");
-    }
-});
-
-// furniture-brand-api/server.js
-
-// ... existing routes ...
-
-// NEW: Update a Product (PUT)
+// 5. Admin: Update Product
 app.put('/api/products/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, description, base_price, material, is_active } = req.body;
-        
-        const updateProduct = await pool.query(
-            "UPDATE products SET name = $1, description = $2, base_price = $3, material = $4, is_active = $5 WHERE product_id = $6",
-            [name, description, base_price, material, is_active, id]
-        );
-
-        res.json({ message: "Product updated!" });
-    } catch (err) {
-        console.error(err.message);
-        res.status(500).send("Server Error");
-    }
-});
-
-// NEW: Delete a Product (DELETE)
-app.delete('/api/products/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-        
-        await pool.query("DELETE FROM products WHERE product_id = $1", [id]);
-        res.json({ message: "Product deleted!" });
-    } catch (err) {
-        console.error(err.message);
-        // If the product is in an order, SQL will throw a foreign key error
-        res.status(400).json({ error: "Cannot delete product (it might be part of an existing order)." });
-    }
-});
-
-// NEW: Update Order Status
-app.put('/api/orders/:id/status', async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { status } = req.body; // e.g., "Shipped", "Completed"
-
+        const { name, base_price, description, material, is_active } = req.body;
         await pool.query(
-            "UPDATE orders SET status = $1 WHERE order_id = $2",
-            [status, id]
+            "UPDATE products SET name = $1, base_price = $2, description = $3, material = $4, is_active = $5 WHERE product_id = $6",
+            [name, base_price, description, material, is_active, id]
         );
-
-        res.json({ message: "Order status updated" });
+        res.json("Product was updated!");
     } catch (err) {
         console.error(err.message);
         res.status(500).send("Server Error");
     }
 });
 
-// SMART DELETE: If product has orders, Archive it. If not, Delete it.
+// 6. Admin: SMART DELETE (Archive if used, Delete if unused)
 app.delete('/api/products/:id', async (req, res) => {
     try {
         const { id } = req.params;
@@ -228,7 +116,115 @@ app.delete('/api/products/:id', async (req, res) => {
     }
 });
 
-// ... app.listen ...
+// 7. Get All Variants (for all products)
+app.get('/api/variants', async (req, res) => {
+    try {
+        const result = await pool.query("SELECT * FROM variants");
+        res.json(result.rows);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send("Server Error");
+    }
+});
+
+// 8. Place Order
+app.post('/api/orders', async (req, res) => {
+    const client = await pool.connect();
+    try {
+        const { cartItems, customerInfo } = req.body;
+        
+        await client.query('BEGIN'); // Start transaction
+
+        // Insert into orders table
+        const orderResult = await client.query(
+            "INSERT INTO orders (customer_name, shipping_address, total_amount, email) VALUES($1, $2, $3, $4) RETURNING order_id",
+            [customerInfo.name, customerInfo.address, customerInfo.total, customerInfo.email]
+        );
+        const orderId = orderResult.rows[0].order_id;
+
+        // Insert into order_items table and update stock
+        for (const item of cartItems) {
+            await client.query(
+                "INSERT INTO order_items (order_id, product_id, product_name, quantity, price_at_purchase) VALUES($1, $2, $3, $4, $5)",
+                [orderId, item.id, item.name, item.quantity, item.price]
+            );
+
+            // If it's a variant, update variant stock
+            if (item.variant_id) {
+                await client.query(
+                    "UPDATE variants SET stock_quantity = stock_quantity - $1 WHERE variant_id = $2",
+                    [item.quantity, item.variant_id]
+                );
+            }
+            // If it's a base product, update base product stock (though we haven't implemented base stock yet)
+            
+        }
+
+        await client.query('COMMIT'); // End transaction
+        res.json({ orderId, message: "Order placed successfully!" });
+
+    } catch (err) {
+        await client.query('ROLLBACK'); // Rollback transaction on error
+        console.error(err.message);
+        res.status(500).send("Server Error during checkout");
+    } finally {
+        client.release();
+    }
+});
+
+// 9. Admin: Get All Orders with Items (for OrderManager)
+app.get('/api/orders', async (req, res) => {
+    try {
+        const ordersResult = await pool.query("SELECT * FROM orders ORDER BY order_id DESC");
+        const orders = ordersResult.rows;
+
+        // Fetch items for all orders concurrently
+        const orderIds = orders.map(o => o.order_id);
+        if (orderIds.length === 0) return res.json([]);
+
+        const itemsResult = await pool.query(
+            "SELECT * FROM order_items WHERE order_id = ANY($1::int[])",
+            [orderIds]
+        );
+        const itemsMap = {};
+        itemsResult.rows.forEach(item => {
+            if (!itemsMap[item.order_id]) {
+                itemsMap[item.order_id] = [];
+            }
+            itemsMap[item.order_id].push(item);
+        });
+
+        const finalOrders = orders.map(order => ({
+            ...order,
+            items: itemsMap[order.order_id] || []
+        }));
+
+        res.json(finalOrders);
+
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send("Server Error fetching orders");
+    }
+});
+
+// 10. Admin: Update Order Status
+app.put('/api/orders/:id/status', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body; // e.g., "Shipped", "Completed"
+
+        await pool.query(
+            "UPDATE orders SET status = $1 WHERE order_id = $2",
+            [status, id]
+        );
+
+        res.json({ message: "Order status updated" });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send("Server Error");
+    }
+});
+
 
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
