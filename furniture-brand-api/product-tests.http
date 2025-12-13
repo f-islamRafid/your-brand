@@ -26,3 +26,29 @@ Content-Type: application/json
     "material": "Velvet",
     "is_active": false
 }
+
+###
+# 5. DELETE - Delete Product 3
+DELETE http://localhost:5000/api/products/3
+
+
+###
+# 6. POST - Create New Variant for Product 2 (Modified Test)
+POST http://localhost:5000/api/variants
+Content-Type: application/json
+
+{
+    "product_id": 2,  
+    "sku": "LCS-BEI-XLG",
+    "color": "Beige",
+    "size": "Extra-Large",
+    "price_modifier": 150.00,
+    "stock_quantity": 10,
+    "image_url": "http://example.com/images/beige-sofa.jpg",
+    "is_available": true
+}
+
+###
+# 7. DELETE - Delete Variant 2
+DELETE http://localhost:5000/api/variants/2
+

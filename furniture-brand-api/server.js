@@ -142,6 +142,85 @@ app.delete('/api/products/:id', async (req, res) => {
     }
 });
 
+// server.js
+
+// 6. POST a new variant for a product (Create Variant)
+app.post('/api/variants', async (req, res) => {
+    try {
+        // Destructure all required fields from the request body
+        const { product_id, sku, color, size, price_modifier, stock_quantity, image_url, is_available } = req.body;
+
+        // SQL Query to insert the new variant
+        const newVariant = await pool.query(
+            "INSERT INTO variants (product_id, sku, color, size, price_modifier, stock_quantity, image_url, is_available) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *;",
+            [product_id, sku, color, size, price_modifier, stock_quantity, image_url, is_available]
+        );
+
+        // Send back the newly created variant object
+        res.status(201).json(newVariant.rows[0]); 
+
+    } catch (err) {
+        console.error('Error creating variant:', err.message);
+        // This will often catch Foreign Key errors if product_id does not exist
+        res.status(500).json({ error: 'Server Error: Failed to create new variant.' });
+    }
+});
+
+// server.js
+
+// 7. GET all variants (Read All)
+app.get('/api/variants', async (req, res) => {
+    try {
+        const allVariants = await pool.query("SELECT * FROM variants;");
+        res.json(allVariants.rows);
+    } catch (err) {
+        console.error('Error fetching all variants:', err.message);
+        res.status(500).json({ error: 'Server Error: Failed to fetch variants.' });
+    }
+});
+
+// 8. GET single variant by ID (Read Single)
+app.get('/api/variants/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const variant = await pool.query("SELECT * FROM variants WHERE variant_id = $1;", [id]);
+        
+        if (variant.rows.length === 0) {
+            return res.status(404).json({ error: "Variant not found" });
+        }
+
+        res.json(variant.rows[0]);
+    } catch (err) {
+        console.error('Error fetching single variant:', err.message);
+        res.status(500).json({ error: 'Server Error: Failed to fetch variant.' });
+    }
+});
+
+// server.js
+
+// 9. DELETE a variant by ID (Delete)
+app.delete('/api/variants/:id', async (req, res) => {
+    try {
+        const { id } = req.params; 
+
+        const deleteVariant = await pool.query(
+            "DELETE FROM variants WHERE variant_id = $1 RETURNING *;",
+            [id]
+        );
+
+        if (deleteVariant.rows.length === 0) {
+            return res.status(404).json({ error: "Variant not found" });
+        }
+        
+        res.json({ message: `Variant with ID ${id} was successfully deleted.` });
+
+    } catch (err) {
+        console.error('Error deleting variant:', err.message);
+        res.status(500).json({ error: 'Server Error: Failed to delete variant.' });
+    }
+});
+
+
 // --- Start Server ---
 app.listen(PORT, () => {
     console.log(`Server listening on port ${PORT}`);
