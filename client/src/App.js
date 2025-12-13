@@ -1,22 +1,20 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
-// NEW: Added 'Form' to imports for the Search Bar
 import { Navbar, Container, Nav, Badge, Row, Col, Form } from 'react-bootstrap';
 import { Toaster } from 'react-hot-toast'; 
 import logo from './assets/logo.png'; 
 
 import { CartProvider, useCart } from './CartContext';
 
-// Pages
+// --- PAGE IMPORTS ---
 import ProductList from './ProductList';
 import ProductDetail from './ProductDetail';
 import Cart from './Cart'; 
 import Checkout from './Checkout'; 
 import Admin from './Admin';
-
-// NEW: Security Imports
 import Login from './Login';
 import ProtectedRoute from './ProtectedRoute';
+import Contact from './Contact'; // <--- NEW: Import Contact Page
 
 import './App.css'; 
 
@@ -42,7 +40,7 @@ function NavBarContent() {
             <Navbar.Toggle aria-controls="basic-navbar-nav" />
             <Navbar.Collapse id="basic-navbar-nav">
               
-              {/* NEW: Search Bar (Step 87) */}
+              {/* Search Bar */}
               <Form className="d-flex mx-auto my-2 my-lg-0" style={{ maxWidth: '400px', width: '100%' }}>
                 <Form.Control
                   type="search"
@@ -55,7 +53,12 @@ function NavBarContent() {
 
               <Nav className="ms-auto">
                 <Nav.Link as={Link} to="/" className="mx-2">Shop</Nav.Link>
+                
+                {/* NEW: Contact Link Added Here */}
+                <Nav.Link as={Link} to="/contact" className="mx-2">Contact</Nav.Link>
+                
                 <Nav.Link as={Link} to="/admin" className="mx-2">Admin</Nav.Link>
+                
                 <Nav.Link as={Link} to="/cart" className="mx-2 position-relative">
                     Cart 
                     {cartCount > 0 && 
@@ -74,6 +77,7 @@ function NavBarContent() {
 // --- COMPONENT: HERO SECTION ---
 function HeroSection() {
     const location = useLocation();
+    // Only show hero on the home page ('/')
     if (location.pathname !== '/') return null;
 
     return (
@@ -103,9 +107,10 @@ function HeroSection() {
     );
 }
 
-// --- COMPONENT: TRUST SIGNALS (Step 86) ---
+// --- COMPONENT: TRUST SIGNALS ---
 function TrustSection() {
     const location = useLocation();
+    // Only show on home page
     if (location.pathname !== '/') return null;
 
     const features = [
@@ -146,8 +151,8 @@ function Footer() {
                         <h5 className="text-white mb-3">Quick Links</h5>
                         <ul className="list-unstyled">
                             <li><Link to="/" className="text-decoration-none text-muted">Shop All</Link></li>
+                            <li><Link to="/contact" className="text-decoration-none text-muted">Contact Us</Link></li>
                             <li><Link to="/cart" className="text-decoration-none text-muted">My Cart</Link></li>
-                            <li><Link to="/admin" className="text-decoration-none text-muted">Admin Login</Link></li>
                         </ul>
                     </Col>
                     <Col md={4} className="mb-4">
@@ -167,7 +172,7 @@ function Footer() {
     );
 }
 
-
+// --- MAIN APP COMPONENT ---
 function App() {
   return (
     <CartProvider>
@@ -186,7 +191,10 @@ function App() {
                 <Route path="/cart" element={<Cart />} />
                 <Route path="/checkout" element={<Checkout />} />
                 
-                {/* NEW: Security Routes */}
+                {/* NEW: Contact Route */}
+                <Route path="/contact" element={<Contact />} />
+
+                {/* Security Routes */}
                 <Route path="/login" element={<Login />} />
                 <Route 
                   path="/admin" 
