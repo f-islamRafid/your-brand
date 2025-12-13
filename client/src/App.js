@@ -13,49 +13,41 @@ import Cart from './Cart';
 import Checkout from './Checkout'; 
 import Admin from './Admin';
 import Contact from './Contact'; 
-
-// Security Imports
 import Login from './Login';
 import ProtectedRoute from './ProtectedRoute';
 
 import './App.css'; 
 
 // --- COMPONENT: NAVIGATION ---
-// client/src/App.js
-
-// ... imports ...
-
 function NavBarContent() {
     const { cartCount } = useCart();
     return (
         <Navbar variant="dark" expand="lg" className="navbar-custom sticky-top">
           <Container>
             <Navbar.Brand as={Link} to="/" className="d-flex align-items-center">
-              {/* LOGO IMAGE UPGRADE */}
               <img
                 alt="Home Decor Logo"
                 src={logo}
-                width="55" // Increased size
-                height="55" // Increased size
-                className="d-inline-block align-top me-3 animate__animated animate__rotateIn" // Added animation
+                width="55" 
+                height="55" 
+                className="d-inline-block align-top me-3 animate__animated animate__rotateIn" 
                 style={{
                     borderRadius: '50%', 
-                    border: '3px solid #A67B5B', // GOLD BORDER
-                    boxShadow: '0 4px 8px rgba(0,0,0,0.3)', // Shadow for depth
-                    padding: '2px', // Space between border and image
+                    border: '3px solid #A67B5B', 
+                    boxShadow: '0 4px 8px rgba(0,0,0,0.3)', 
+                    padding: '2px', 
                     backgroundColor: 'white'
                 }}
               />
               
-              {/* LOGO TEXT UPGRADE */}
               <div className="d-flex flex-column">
                   <span style={{ 
-                      fontFamily: "'Playfair Display', serif", // Luxury Font
+                      fontFamily: "'Playfair Display', serif", 
                       fontWeight: '700', 
-                      fontSize: '1.8rem', // Bigger text
+                      fontSize: '1.8rem', 
                       letterSpacing: '1.5px', 
                       color: '#ffffff',
-                      textShadow: '0 2px 4px rgba(0,0,0,0.5)', // 3D Text Effect
+                      textShadow: '0 2px 4px rgba(0,0,0,0.5)', 
                       lineHeight: '1'
                   }}>
                     Home Decor
@@ -64,7 +56,7 @@ function NavBarContent() {
                       fontSize: '0.75rem',
                       letterSpacing: '3px',
                       textTransform: 'uppercase',
-                      color: '#A67B5B', // Gold subtitle
+                      color: '#A67B5B', 
                       fontWeight: '500'
                   }}>
                       Furniture & Design
@@ -75,18 +67,13 @@ function NavBarContent() {
             <Navbar.Toggle aria-controls="basic-navbar-nav" />
             <Navbar.Collapse id="basic-navbar-nav">
               
-              {/* Search Bar (Kept the same) */}
               <Form className="d-flex mx-auto my-2 my-lg-0" style={{ maxWidth: '400px', width: '100%' }}>
                 <Form.Control
                   type="search"
                   placeholder="Search for furniture..."
                   className="me-2 rounded-pill border-0 shadow-sm"
                   aria-label="Search"
-                  style={{ 
-                      background: 'rgba(255,255,255,0.15)', 
-                      color: 'white',
-                      backdropFilter: 'blur(5px)' // Modern glass effect
-                  }}
+                  style={{ background: 'rgba(255,255,255,0.15)', color: 'white', backdropFilter: 'blur(5px)' }}
                 />
               </Form>
 
@@ -108,8 +95,6 @@ function NavBarContent() {
         </Navbar>
     );
 }
-
-// ... rest of the file ...
 
 // --- COMPONENT: HERO SECTION ---
 function HeroSection() {
@@ -158,7 +143,8 @@ function TrustSection() {
     if (location.pathname !== '/') return null;
 
     const features = [
-        { icon: "🚚", title: "Free Shipping", text: "On all orders over $500" },
+        // 👇 CURRENCY UPDATED HERE
+        { icon: "🚚", title: "Free Shipping", text: "On all orders over ৳5000" },
         { icon: "🛡️", title: "Secure Payment", text: "100% protected transactions" },
         { icon: "✨", title: "Quality Material", text: "Hand-picked premium wood" },
         { icon: "↩️", title: "Easy Returns", text: "30-day money back guarantee" },
@@ -220,7 +206,6 @@ function Footer() {
     );
 }
 
-// --- MAIN APP COMPONENT ---
 function App() {
   return (
     <CartProvider>
@@ -240,7 +225,6 @@ function App() {
                 <Route path="/checkout" element={<Checkout />} />
                 <Route path="/contact" element={<Contact />} />
 
-                {/* SECURITY ROUTES */}
                 <Route path="/login" element={<Login />} />
                 <Route 
                   path="/admin" 

@@ -182,7 +182,23 @@ app.delete('/api/products/:id', async (req, res) => {
     }
 });
 
-// app.listen...
+// NEW: Update Order Status
+app.put('/api/orders/:id/status', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body; // e.g., "Shipped", "Completed"
+
+        await pool.query(
+            "UPDATE orders SET status = $1 WHERE order_id = $2",
+            [status, id]
+        );
+
+        res.json({ message: "Order status updated" });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send("Server Error");
+    }
+});
 
 // ... app.listen ...
 

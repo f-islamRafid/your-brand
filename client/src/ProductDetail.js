@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Container, Row, Col, Card, Button, Badge, Form, Spinner, Alert } from 'react-bootstrap';
+import { Container, Row, Col, Card, Button, Badge, Spinner, Alert } from 'react-bootstrap';
 import { useCart } from './CartContext';
-import toast from 'react-hot-toast'; // Import Toast Library
+import toast from 'react-hot-toast'; 
 
 function ProductDetail() {
     const { id } = useParams();
@@ -43,13 +43,8 @@ function ProductDetail() {
         }
 
         addToCart(product, selectedVariant);
-        // This is the new sleek notification:
         toast.success(`${product.name} added to cart!`, {
-            style: {
-                borderRadius: '10px',
-                background: '#333',
-                color: '#fff',
-            },
+            style: { borderRadius: '10px', background: '#333', color: '#fff' },
         }); 
     };
 
@@ -77,7 +72,8 @@ function ProductDetail() {
                 <Col md={6}>
                     <h1 className="display-5 fw-bold mb-2">{product.name}</h1>
                     <div className="mb-4 d-flex align-items-center">
-                        <span className="h2 text-primary me-3 mb-0">${product.base_price}</span>
+                        {/* 👇 CURRENCY UPDATED HERE */}
+                        <span className="h2 text-primary me-3 mb-0">৳{product.base_price}</span>
                         {product.is_active ? 
                             <Badge bg="success" className="px-3 py-2">In Stock</Badge> : 
                             <Badge bg="danger" className="px-3 py-2">Unavailable</Badge>
@@ -110,7 +106,8 @@ function ProductDetail() {
                                             <span className="text-muted small">SKU: {variant.sku}</span>
                                         </div>
                                         <div className="text-end">
-                                            {variant.price_modifier > 0 && <span className="text-warning fw-bold me-3">+${variant.price_modifier}</span>}
+                                            {/* 👇 CURRENCY UPDATED HERE */}
+                                            {variant.price_modifier > 0 && <span className="text-warning fw-bold me-3">+৳{variant.price_modifier}</span>}
                                             {selectedVariant?.variant_id === variant.variant_id && <Badge bg="primary">Selected</Badge>}
                                         </div>
                                     </Card.Body>

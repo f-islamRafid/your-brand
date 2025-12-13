@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Row, Col, Card, Button, Alert } from 'react-bootstrap';
 
-// 1. The Skeleton Card Component (Visual Upgrade)
+// Skeleton Component
 const SkeletonCard = () => (
     <Col>
         <Card className="h-100 border-0 shadow-sm">
@@ -20,12 +20,9 @@ function ProductList() {
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    
-    // 2. New State for Filtering
     const [filter, setFilter] = useState('All');
 
     useEffect(() => {
-        // Simulate a slight delay so you can see the beautiful skeleton loader
         const timer = setTimeout(() => {
             fetch('/api/products')
                 .then(response => {
@@ -41,14 +38,12 @@ function ProductList() {
                     setError(e.message);
                     setLoading(false);
                 });
-        }, 800); // 800ms delay for effect
+        }, 800);
         return () => clearTimeout(timer);
     }, []);
 
-    // 3. Filter Logic
     const getFilteredProducts = () => {
         if (filter === 'All') return products;
-        // Simple text matching for now
         return products.filter(p => p.name.toLowerCase().includes(filter.toLowerCase()));
     };
 
@@ -57,7 +52,6 @@ function ProductList() {
     if (error) return <Alert variant="danger" className="m-5">Error loading catalog: {error}</Alert>;
 
     return (
-        // 👇 ADDED ID="collection" HERE so the Hero Button can find this section
         <div className="py-4" id="collection">
             <div className="text-center mb-5">
                 <h2 className="mb-3 fw-bold display-6">Featured Collection</h2>
@@ -66,7 +60,6 @@ function ProductList() {
                 </p>
             </div>
 
-            {/* 4. The Category Filter Bar (Efficiency Upgrade) */}
             <div className="d-flex justify-content-center mb-5 flex-wrap gap-2">
                 {['All', 'Chair', 'Sofa', 'Table', 'Lamp'].map(category => (
                     <Button 
@@ -82,7 +75,6 @@ function ProductList() {
             </div>
             
             <Row xs={1} md={2} lg={3} className="g-4 animate__animated animate__fadeInUp">
-                {/* 5. Show Skeletons while loading */}
                 {loading ? (
                     Array(6).fill(0).map((_, i) => <SkeletonCard key={i} />)
                 ) : filteredProducts.length === 0 ? (
@@ -91,7 +83,6 @@ function ProductList() {
                         <Button variant="link" onClick={() => setFilter('All')}>View All</Button>
                     </Col>
                 ) : (
-                    /* 6. Real Products */
                     filteredProducts.map(product => (
                         <Col key={product.product_id}>
                             <Card className="h-100 product-card shadow-sm border-0">
@@ -122,7 +113,8 @@ function ProductList() {
                                 <Card.Body className="d-flex flex-column p-4">
                                     <div className="d-flex justify-content-between align-items-start mb-2">
                                         <Card.Title className="fs-5 fw-bold mb-0">{product.name}</Card.Title>
-                                        <span className="text-primary fw-bold">${product.base_price}</span>
+                                        {/* 👇 CURRENCY UPDATED HERE */}
+                                        <span className="text-primary fw-bold">৳{product.base_price}</span>
                                     </div>
                                     <Card.Text className="text-muted small" style={{ flexGrow: 1 }}>
                                         {product.description.substring(0, 60)}...
