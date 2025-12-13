@@ -1,0 +1,28 @@
+### 
+# 3. POST - Create New Product
+# This request inserts a new product into the database.
+POST http://localhost:5000/api/products
+Content-Type: application/json
+
+{
+    "category_id": 1,
+    "name": "Luxury Corner Sofa",
+    "description": "A deep, comfortable sofa perfect for living room corners.",
+    "base_price": 1200.00,
+    "material": "Velvet"
+}
+
+
+###
+# 4. PUT - Update Product 2 for Sale
+PUT http://localhost:5000/api/products/2
+Content-Type: application/json
+
+{
+    "category_id": 1, 
+    "name": "Luxury Corner Sofa (SALE)",
+    "description": "A deep, comfortable sofa on temporary sale.",
+    "base_price": 999.99,
+    "material": "Velvet",
+    "is_active": false
+}
