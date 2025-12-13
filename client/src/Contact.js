@@ -34,9 +34,8 @@ function Contact() {
                                 <div>
                                     <h6 className="fw-bold mb-1">Our Showroom</h6>
                                     <p className="text-muted mb-0">
-                                        {/* CHANGE THIS TO YOUR REAL ADDRESS */}
-                                        123 Real Street Name, Suite 100<br />
-                                        City Name, State, Zip Code
+                                        698 North Shahjahanpur<br />
+                                        Dhaka, Bangladesh
                                     </p>
                                 </div>
                             </div>
@@ -47,10 +46,9 @@ function Contact() {
                                 <div>
                                     <h6 className="fw-bold mb-1">Phone</h6>
                                     <p className="text-muted mb-0">
-                                        {/* CHANGE THIS TO YOUR REAL PHONE */}
-                                        +1 (555) 000-0000
+                                        01715-287749
                                     </p>
-                                    <small className="text-muted">Mon-Fri: 9am - 6pm EST</small>
+                                    <small className="text-muted">Mon-Fri: 9am - 8pm</small>
                                 </div>
                             </div>
 
@@ -60,8 +58,7 @@ function Contact() {
                                 <div>
                                     <h6 className="fw-bold mb-1">Email</h6>
                                     <p className="text-muted mb-0">
-                                        {/* CHANGE THIS TO YOUR REAL EMAIL */}
-                                        contact@yourrealdomain.com
+                                        homedecor1975@gmail.com
                                     </p>
                                 </div>
                             </div>
@@ -73,20 +70,14 @@ function Contact() {
                                 <h6 className="fw-bold mb-2">Follow Us</h6>
                                 <div className="d-flex gap-3 text-muted" style={{ fontSize: '1.5rem' }}>
                                     
-                                    {/* INSTAGRAM */}
-                                    <a href="https://instagram.com/YOUR_USERNAME" target="_blank" rel="noreferrer" style={{ textDecoration: 'none', color: 'inherit' }}>
-                                        📷
-                                    </a>
-                                    
-                                    {/* FACEBOOK */}
-                                    <a href="https://facebook.com/YOUR_PAGE_NAME" target="_blank" rel="noreferrer" style={{ textDecoration: 'none', color: 'inherit' }}>
+                                    {/* FACEBOOK (Active) */}
+                                    <a href="https://www.facebook.com/HOMEDECOR998" target="_blank" rel="noreferrer" style={{ textDecoration: 'none', color: '#1877F2' }} title="Facebook">
                                         📘
                                     </a>
-                                    
-                                    {/* PINTEREST */}
-                                    <a href="https://pinterest.com/YOUR_USERNAME" target="_blank" rel="noreferrer" style={{ textDecoration: 'none', color: 'inherit' }}>
-                                        📌
-                                    </a>
+
+                                    {/* Placeholders for others (Optional) */}
+                                    <span style={{ opacity: 0.3, cursor: 'not-allowed' }} title="Coming Soon">📷</span>
+                                    <span style={{ opacity: 0.3, cursor: 'not-allowed' }} title="Coming Soon">📌</span>
                                 </div>
                             </div>
                         </Card.Body>
