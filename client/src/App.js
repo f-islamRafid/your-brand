@@ -1,15 +1,22 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
-import { Navbar, Container, Nav, Badge, Row, Col } from 'react-bootstrap';
-import { Toaster } from 'react-hot-toast'; // 1. Import Toaster for notifications
+// NEW: Added 'Form' to imports for the Search Bar
+import { Navbar, Container, Nav, Badge, Row, Col, Form } from 'react-bootstrap';
+import { Toaster } from 'react-hot-toast'; 
 import logo from './assets/logo.png'; 
 
 import { CartProvider, useCart } from './CartContext';
+
+// Pages
 import ProductList from './ProductList';
 import ProductDetail from './ProductDetail';
 import Cart from './Cart'; 
 import Checkout from './Checkout'; 
 import Admin from './Admin';
+
+// NEW: Security Imports
+import Login from './Login';
+import ProtectedRoute from './ProtectedRoute';
 
 import './App.css'; 
 
@@ -34,6 +41,18 @@ function NavBarContent() {
             </Navbar.Brand>
             <Navbar.Toggle aria-controls="basic-navbar-nav" />
             <Navbar.Collapse id="basic-navbar-nav">
+              
+              {/* NEW: Search Bar (Step 87) */}
+              <Form className="d-flex mx-auto my-2 my-lg-0" style={{ maxWidth: '400px', width: '100%' }}>
+                <Form.Control
+                  type="search"
+                  placeholder="Search for furniture..."
+                  className="me-2 rounded-pill border-0"
+                  aria-label="Search"
+                  style={{ background: 'rgba(255,255,255,0.15)', color: 'white' }}
+                />
+              </Form>
+
               <Nav className="ms-auto">
                 <Nav.Link as={Link} to="/" className="mx-2">Shop</Nav.Link>
                 <Nav.Link as={Link} to="/admin" className="mx-2">Admin</Nav.Link>
@@ -52,11 +71,9 @@ function NavBarContent() {
     );
 }
 
-// --- COMPONENT: HERO SECTION (Only shows on Home Page) ---
+// --- COMPONENT: HERO SECTION ---
 function HeroSection() {
     const location = useLocation();
-    
-    // Only show hero on the home page ('/')
     if (location.pathname !== '/') return null;
 
     return (
@@ -71,7 +88,6 @@ function HeroSection() {
             borderRadius: '0 0 20px 20px'
         }}>
             <Container>
-                {/* 2. Added Animation Class to the Header */}
                 <h1 className="display-3 fw-bold mb-3 animate__animated animate__fadeInDown" style={{color: 'white'}}>
                     Elevate Your Living Space
                 </h1>
@@ -82,6 +98,35 @@ function HeroSection() {
                 <Link to="/" className="btn btn-light btn-lg px-5 rounded-pill shadow animate__animated animate__fadeInUp" style={{animationDelay: '0.4s'}}>
                     Browse Collection
                 </Link>
+            </Container>
+        </div>
+    );
+}
+
+// --- COMPONENT: TRUST SIGNALS (Step 86) ---
+function TrustSection() {
+    const location = useLocation();
+    if (location.pathname !== '/') return null;
+
+    const features = [
+        { icon: "🚚", title: "Free Shipping", text: "On all orders over $500" },
+        { icon: "🛡️", title: "Secure Payment", text: "100% protected transactions" },
+        { icon: "✨", title: "Quality Material", text: "Hand-picked premium wood" },
+        { icon: "↩️", title: "Easy Returns", text: "30-day money back guarantee" },
+    ];
+
+    return (
+        <div style={{ backgroundColor: '#fff', marginTop: '-40px', padding: '40px 0', position: 'relative', zIndex: 10, boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
+            <Container>
+                <Row>
+                    {features.map((f, i) => (
+                        <Col key={i} md={3} sm={6} className="text-center mb-3 mb-md-0 animate__animated animate__fadeInUp" style={{ animationDelay: `${i * 0.1}s` }}>
+                            <div style={{ fontSize: '2.5rem', marginBottom: '10px' }}>{f.icon}</div>
+                            <h6 style={{ fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px' }}>{f.title}</h6>
+                            <p className="text-muted small mb-0">{f.text}</p>
+                        </Col>
+                    ))}
+                </Row>
             </Container>
         </div>
     );
@@ -122,18 +167,17 @@ function Footer() {
     );
 }
 
+
 function App() {
   return (
     <CartProvider>
         <Router>
           <div className="App d-flex flex-column min-vh-100">
-            {/* 3. Add Toaster here (Invisible until triggered) */}
             <Toaster position="top-center" reverseOrder={false} />
 
             <NavBarContent />
-            
-            {/* The HeroSection handles its own internal animation classes */}
             <HeroSection />
+            <TrustSection />
 
             <Container className="flex-grow-1">
               <Routes>
@@ -141,7 +185,17 @@ function App() {
                 <Route path="/product/:id" element={<ProductDetail />} />
                 <Route path="/cart" element={<Cart />} />
                 <Route path="/checkout" element={<Checkout />} />
-                <Route path="/admin" element={<Admin />} />
+                
+                {/* NEW: Security Routes */}
+                <Route path="/login" element={<Login />} />
+                <Route 
+                  path="/admin" 
+                  element={
+                    <ProtectedRoute>
+                      <Admin />
+                    </ProtectedRoute>
+                  } 
+                />
               </Routes>
             </Container>
 

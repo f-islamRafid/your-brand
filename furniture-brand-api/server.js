@@ -146,6 +146,44 @@ app.get('/api/orders', async (req, res) => {
     }
 });
 
+// furniture-brand-api/server.js
+
+// ... existing routes ...
+
+// NEW: Update a Product (PUT)
+app.put('/api/products/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { name, description, base_price, material, is_active } = req.body;
+        
+        const updateProduct = await pool.query(
+            "UPDATE products SET name = $1, description = $2, base_price = $3, material = $4, is_active = $5 WHERE product_id = $6",
+            [name, description, base_price, material, is_active, id]
+        );
+
+        res.json({ message: "Product updated!" });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send("Server Error");
+    }
+});
+
+// NEW: Delete a Product (DELETE)
+app.delete('/api/products/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        await pool.query("DELETE FROM products WHERE product_id = $1", [id]);
+        res.json({ message: "Product deleted!" });
+    } catch (err) {
+        console.error(err.message);
+        // If the product is in an order, SQL will throw a foreign key error
+        res.status(400).json({ error: "Cannot delete product (it might be part of an existing order)." });
+    }
+});
+
+// app.listen...
+
 // ... app.listen ...
 
 app.listen(PORT, () => {
