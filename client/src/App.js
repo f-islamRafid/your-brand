@@ -1,6 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
-import { Navbar, Container, Nav, Badge, Row, Col, Form, Button } from 'react-bootstrap';
+import { Navbar, Container, Nav, Badge, Row, Col, Form, Button, Alert } from 'react-bootstrap';
 import { Toaster } from 'react-hot-toast'; 
 import logo from './assets/logo.png'; 
 
@@ -23,7 +23,8 @@ import './App.css';
 function NavBarContent() {
     const { cartCount } = useCart();
     return (
-        <Navbar variant="dark" expand="lg" className="navbar-custom sticky-top">
+        // zIndex ensures this stays ON TOP of the admin sidebar
+        <Navbar variant="dark" expand="lg" className="navbar-custom sticky-top" style={{ zIndex: 1050 }}>
           <Container>
             <Navbar.Brand as={Link} to="/" className="d-flex align-items-center">
               {/* Gold Border Logo */}
