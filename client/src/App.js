@@ -20,6 +20,8 @@ import ProtectedRoute from './ProtectedRoute';
 import './App.css'; 
 
 // --- COMPONENT: NAVIGATION (Restored Green/Gold) ---
+// client/src/App.js
+
 function NavBarContent() {
     const { cartCount } = useCart();
     return (
@@ -44,6 +46,7 @@ function NavBarContent() {
               />
               
               <div className="d-flex flex-column">
+                  {/* Main Brand Name */}
                   <span style={{ 
                       fontFamily: "'Playfair Display', serif", 
                       fontWeight: '700', 
@@ -51,18 +54,22 @@ function NavBarContent() {
                       letterSpacing: '1.5px', 
                       color: '#ffffff',
                       textShadow: '0 2px 4px rgba(0,0,0,0.5)', 
-                      lineHeight: '1'
+                      lineHeight: '1',
+                      marginBottom: '2px' 
                   }}>
                     Home Decor
                   </span>
+                  
+                  {/* 👇 NEW MOTO UPDATED HERE */}
                   <span style={{
-                      fontSize: '0.75rem',
-                      letterSpacing: '3px',
+                      fontSize: '0.65rem', // Slightly smaller for the motto look
+                      letterSpacing: '2px',
                       textTransform: 'uppercase',
-                      color: '#A67B5B', // Gold subtitle
-                      fontWeight: '500'
+                      color: '#A67B5B', // Gold color
+                      fontWeight: '600',
+                      fontStyle: 'italic' // Italic adds elegance
                   }}>
-                      Furniture & Design
+                      Quality You Can Trust
                   </span>
               </div>
             </Navbar.Brand>
