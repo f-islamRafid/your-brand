@@ -203,6 +203,42 @@ app.put('/api/orders/:id/status', async (req, res) => {
     }
 });
 
+// --- NEW REVIEW ROUTES ---
+
+// 11. Get Reviews for a Product
+app.get('/api/products/:id/reviews', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const result = await pool.query(
+            "SELECT * FROM reviews WHERE product_id = $1 ORDER BY created_at DESC", 
+            [id]
+        );
+        res.json(result.rows);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send("Server Error");
+    }
+});
+
+// 12. Add a Review
+app.post('/api/products/:id/reviews', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { user_name, rating, comment } = req.body;
+        
+        const newReview = await pool.query(
+            "INSERT INTO reviews (product_id, user_name, rating, comment) VALUES($1, $2, $3, $4) RETURNING *",
+            [id, user_name, rating, comment]
+        );
+        
+        res.json(newReview.rows[0]);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send("Server Error");
+    }
+});
+
+
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
