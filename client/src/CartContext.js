@@ -1,62 +1,101 @@
-// client/src/CartContext.js
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 
 const CartContext = createContext();
 
-export const CartProvider = ({ children }) => {
-    const [cart, setCart] = useState(() => {
-        const localData = localStorage.getItem('furniture_cart');
-        return localData ? JSON.parse(localData) : [];
+export function useCart() {
+    return useContext(CartContext);
+}
+
+export function CartProvider({ children }) {
+    // 1. Initialize State from Local Storage (Load saved cart)
+    const [cartItems, setCartItems] = useState(() => {
+        try {
+            const localData = localStorage.getItem('furniture_cart');
+            return localData ? JSON.parse(localData) : [];
+        } catch (error) {
+            console.error("Error parsing cart data", error);
+            return [];
+        }
     });
 
+    // 2. Save to Local Storage whenever cart changes
     useEffect(() => {
-        localStorage.setItem('furniture_cart', JSON.stringify(cart));
-    }, [cart]);
+        localStorage.setItem('furniture_cart', JSON.stringify(cartItems));
+    }, [cartItems]);
 
-    const addToCart = (product, variant) => {
-        setCart(prevCart => {
-            const existingItem = prevCart.find(item => 
-                item.product_id === product.product_id && 
-                item.variant_id === variant?.variant_id
-            );
+    // Calculate Total Price
+    const cartTotal = cartItems.reduce((total, item) => total + (item.base_price * item.quantity) + (item.price_modifier || 0) * item.quantity, 0).toFixed(2);
+    
+    // Count Total Items
+    const totalItems = cartItems.reduce((count, item) => count + item.quantity, 0);
+
+    // Function: Add to Cart
+    const addToCart = (product, variant = null) => {
+        setCartItems(prevItems => {
+            // Create a unique ID for the cart item (Product ID + Variant ID)
+            const cartId = variant 
+                ? `${product.product_id}-${variant.variant_id}` 
+                : `${product.product_id}-base`;
+
+            const existingItem = prevItems.find(item => item.cartId === cartId);
 
             if (existingItem) {
-                return prevCart.map(item => 
-                    (item.product_id === product.product_id && item.variant_id === variant?.variant_id)
-                        ? { ...item, quantity: item.quantity + 1 }
+                // If item exists, just increase quantity
+                return prevItems.map(item => 
+                    item.cartId === cartId 
+                        ? { ...item, quantity: item.quantity + 1 } 
                         : item
                 );
             } else {
-                return [...prevCart, { 
-                    ...product, 
-                    variant_id: variant?.variant_id,
-                    variant_name: variant ? `${variant.color} - ${variant.size}` : 'Standard',
-                    price: variant ? (parseFloat(product.base_price) + parseFloat(variant.price_modifier)).toFixed(2) : product.base_price,
-                    quantity: 1 
+                // Add new item
+                return [...prevItems, {
+                    cartId,
+                    id: product.product_id,
+                    name: product.name,
+                    image: product.image, // Assuming image path logic is handled in display
+                    price: parseFloat(product.base_price) + (variant ? parseFloat(variant.price_modifier) : 0),
+                    quantity: 1,
+                    variant_id: variant ? variant.variant_id : null,
+                    variant_info: variant ? `${variant.color} / ${variant.size}` : null
                 }];
             }
         });
     };
 
-    const removeFromCart = (productId, variantId) => {
-        setCart(prevCart => prevCart.filter(item => 
-            !(item.product_id === productId && item.variant_id === variantId)
-        ));
+    // Function: Remove from Cart
+    const removeFromCart = (cartId) => {
+        setCartItems(prevItems => prevItems.filter(item => item.cartId !== cartId));
     };
 
-    // --- NEW FUNCTION ---
+    // Function: Update Quantity
+    const updateQuantity = (cartId, newQuantity) => {
+        if (newQuantity < 1) return;
+        setCartItems(prevItems => 
+            prevItems.map(item => 
+                item.cartId === cartId ? { ...item, quantity: newQuantity } : item
+            )
+        );
+    };
+
+    // Function: Clear Cart (After payment)
     const clearCart = () => {
-        setCart([]);
+        setCartItems([]);
+        localStorage.removeItem('furniture_cart');
     };
 
-    const cartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
+    const value = {
+        cartItems,
+        cartTotal,
+        totalItems,
+        addToCart,
+        removeFromCart,
+        updateQuantity,
+        clearCart
+    };
 
     return (
-        // Add clearCart to the value object below
-        <CartContext.Provider value={{ cart, addToCart, removeFromCart, clearCart, cartCount }}>
+        <CartContext.Provider value={value}>
             {children}
         </CartContext.Provider>
     );
-};
-
-export const useCart = () => useContext(CartContext);
+}

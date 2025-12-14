@@ -1,108 +1,105 @@
 import React from 'react';
 import { Container, Table, Button, Card, Row, Col } from 'react-bootstrap';
-import { Link } from 'react-router-dom';
 import { useCart } from './CartContext';
+import { Link, useNavigate } from 'react-router-dom';
 
 function Cart() {
-    // 1. Get cart data and the remove function from our Context
-    const { cart, removeFromCart } = useCart();
+    const { cartItems, removeFromCart, updateQuantity, cartTotal, clearCart } = useCart();
+    const navigate = useNavigate();
 
-    // 2. Calculate the Grand Total
-    const total = cart.reduce((acc, item) => acc + (parseFloat(item.price) * item.quantity), 0);
+    const handleProceed = () => {
+        navigate('/checkout'); // Smooth navigation
+    };
 
-    // 3. Handle Empty State
-    if (cart.length === 0) {
+    if (cartItems.length === 0) {
         return (
-            <Container className="mt-5 text-center">
-                <div className="p-5 bg-light rounded-3">
-                    <h2 className="display-6">Your Cart is Empty</h2>
-                    <p className="lead">Looks like you haven't added any furniture yet.</p>
-                    <Link to="/" className="btn btn-primary mt-3">Start Shopping</Link>
-                </div>
+            <Container className="py-5 text-center animate__animated animate__fadeIn">
+                <h2 className="mb-3">Your Cart is Empty</h2>
+                <p className="text-muted mb-4">Looks like you haven't made your choice yet.</p>
+                <Button as={Link} to="/" variant="dark" size="lg">Start Shopping</Button>
             </Container>
         );
     }
 
     return (
-        <Container className="py-5">
-            <h2 className="mb-4">Shopping Cart</h2>
+        <Container className="py-5 animate__animated animate__fadeIn">
+            <h2 className="mb-4 fw-bold" style={{ fontFamily: 'Playfair Display, serif' }}>Shopping Cart</h2>
+            
             <Row>
-                {/* Left Column: Cart Items Table */}
-                <Col md={8}>
-                    <Table responsive bordered hover className="align-middle">
-                        <thead className="bg-light">
-                            <tr>
-                                <th>Product</th>
-                                <th>Price</th>
-                                <th>Qty</th>
-                                <th>Total</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {cart.map((item, index) => (
-                                <tr key={`${item.product_id}-${item.variant_id}-${index}`}>
-                                    <td>
-                                        <div className="d-flex align-items-center">
-                                            {/* Thumbnail Image */}
-                                            <img
-                                                src={`/images/${item.product_id}.jpg`}
-                                                alt={item.name}
-                                                style={{ width: '60px', height: '60px', objectFit: 'cover', marginRight: '15px', borderRadius: '4px' }}
-                                                onError={(e) => { e.target.onerror = null; e.target.src = "https://placehold.co/60?text=?"; }}
-                                            />
-                                            <div>
-                                                <div className="fw-bold">{item.name}</div>
-                                                <div className="text-muted small">Option: {item.variant_name}</div>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td>${item.price}</td>
-                                    <td>{item.quantity}</td>
-                                    <td>${(parseFloat(item.price) * item.quantity).toFixed(2)}</td>
-                                    <td>
-                                        <Button
-                                            variant="outline-danger"
-                                            size="sm"
-                                            onClick={() => removeFromCart(item.product_id, item.variant_id)}
-                                        >
-                                            &times; Remove
-                                        </Button>
-                                    </td>
+                <Col lg={8}>
+                    <Card className="border-0 shadow-sm mb-4">
+                        <Table responsive className="mb-0 align-middle">
+                            <thead className="bg-light">
+                                <tr>
+                                    <th className="py-3 ps-4">Product</th>
+                                    <th className="py-3">Price</th>
+                                    <th className="py-3">Quantity</th>
+                                    <th className="py-3">Total</th>
+                                    <th className="py-3">Action</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </Table>
+                            </thead>
+                            <tbody>
+                                {cartItems.map((item) => (
+                                    <tr key={item.cartId}>
+                                        <td className="ps-4">
+                                            <div className="d-flex align-items-center">
+                                                <img 
+                                                    src={`/images/${item.id}.jpg`} 
+                                                    alt={item.name} 
+                                                    style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '8px', marginRight: '15px' }}
+                                                    onError={(e) => { e.target.onerror = null; e.target.src = "https://placehold.co/60x60"; }}
+                                                />
+                                                <div>
+                                                    <span className="fw-bold d-block">{item.name}</span>
+                                                    {item.variant_info && <small className="text-muted">{item.variant_info}</small>}
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>৳{item.price}</td>
+                                        <td>
+                                            <div className="d-flex align-items-center">
+                                                <Button variant="outline-secondary" size="sm" onClick={() => updateQuantity(item.cartId, item.quantity - 1)}>-</Button>
+                                                <span className="mx-2 fw-bold">{item.quantity}</span>
+                                                <Button variant="outline-secondary" size="sm" onClick={() => updateQuantity(item.cartId, item.quantity + 1)}>+</Button>
+                                            </div>
+                                        </td>
+                                        <td className="fw-bold">৳{item.price * item.quantity}</td>
+                                        <td>
+                                            <Button variant="link" className="text-danger p-0" onClick={() => removeFromCart(item.cartId)}>Remove</Button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </Table>
+                    </Card>
                 </Col>
 
-                {/* Right Column: Order Summary */}
-                <Col md={4}>
-                    <Card className="shadow-sm border-0 bg-light">
-                        <Card.Body>
-                            <Card.Title>Order Summary</Card.Title>
-                            <hr />
-                            <div className="d-flex justify-content-between mb-2">
-                                <span>Subtotal:</span>
-                                <span>${total.toFixed(2)}</span>
+                <Col lg={4}>
+                    <Card className="border-0 shadow-sm bg-light">
+                        <Card.Body className="p-4">
+                            <h5 className="fw-bold mb-4">Order Summary</h5>
+                            <div className="d-flex justify-content-between mb-3">
+                                <span>Subtotal</span>
+                                <span>৳{cartTotal}</span>
                             </div>
-                            <div className="d-flex justify-content-between mb-2 text-muted">
-                                <span>Shipping:</span>
-                                <span>Free</span>
+                            <div className="d-flex justify-content-between mb-3 text-success">
+                                <span>Shipping</span>
+                                <span>FREE</span>
                             </div>
                             <hr />
-                            <div className="d-flex justify-content-between mb-4 fs-5 fw-bold">
-                                <span>Total:</span>
-                                <span>${total.toFixed(2)}</span>
+                            <div className="d-flex justify-content-between mb-4">
+                                <span className="h5 fw-bold">Total</span>
+                                <span className="h5 fw-bold">৳{cartTotal}</span>
                             </div>
-                            <div className="d-grid">
-                                {/* This Button now links to the Checkout Page */}
-                                <Button as={Link} to="/checkout" variant="success" size="lg">
-                                    Proceed to Checkout
-                                </Button>
-                            </div>
-                            <div className="mt-3 text-center">
-                                <Link to="/" className="text-decoration-none">Continue Shopping</Link>
-                            </div>
+                            
+                            {/* PROCEED BUTTON */}
+                            <Button variant="dark" size="lg" className="w-100" onClick={handleProceed}>
+                                Proceed to Checkout
+                            </Button>
+                            
+                            <Button variant="outline-danger" size="sm" className="w-100 mt-3" onClick={clearCart}>
+                                Clear Cart
+                            </Button>
                         </Card.Body>
                     </Card>
                 </Col>
