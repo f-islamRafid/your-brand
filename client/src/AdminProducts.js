@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Container, Table, Button, Card, Spinner, Badge, Form, Dropdown } from 'react-bootstrap';
 import { FaPlus, FaFilter, FaEllipsisV, FaPencilAlt, FaTrash } from 'react-icons/fa';
-import ProductModal from './ProductModal'; // Assuming you have a modal for Add/Edit
+import ProductModal from './ProductModal'; 
 import toast from 'react-hot-toast';
+ // Assuming you have a modal for Add/Edit
 
 function Products() {
     const [products, setProducts] = useState([]);

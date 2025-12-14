@@ -3,26 +3,33 @@ import { Container, Row, Col, Form, Button, Table, Alert, Badge, Nav, Tab, Card,
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 
-// --- SUB-COMPONENT: PRODUCT MANAGER ---
+// --- SUB-COMPONENT: PRODUCT MANAGER (UPDATED FOR BETTER UI/UX) ---
 function ProductManager({ products, fetchProducts }) {
     const [searchTerm, setSearchTerm] = useState('');
     const [showForm, setShowForm] = useState(false);
-    
-    // Form State
+    const [statusFilter, setStatusFilter] = useState('ALL'); // NEW: Filter State
+
+    // Form State (for ADD)
     const [formData, setFormData] = useState({ name: '', description: '', base_price: '', material: '' });
     const [file, setFile] = useState(null);
     
-    // Edit State
+    // Edit State (for EDIT Modal)
     const [showEditModal, setShowEditModal] = useState(false);
     const [editData, setEditData] = useState({ product_id: '', name: '', description: '', base_price: '', material: '', is_active: true });
 
-    // Filter Logic
-    const filteredProducts = products.filter(p => 
-        p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        p.product_id.toString().includes(searchTerm)
-    );
+    // Filter Logic (UPDATED)
+    const filteredProducts = products.filter(p => {
+        const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                              p.product_id.toString().includes(searchTerm);
+        
+        const matchesStatus = statusFilter === 'ALL' || 
+                              (statusFilter === 'ACTIVE' && p.is_active) || 
+                              (statusFilter === 'HIDDEN' && !p.is_active);
 
-    // --- HANDLERS ---
+        return matchesSearch && matchesStatus;
+    });
+
+    // --- HANDLERS (Keep the existing handlers: handleChange, handleFileChange, handleSubmit, handleDelete, etc.) ---
     const handleChange = (e) => setFormData({...formData, [e.target.name]: e.target.value});
     const handleFileChange = (e) => setFile(e.target.files[0]);
 
@@ -47,7 +54,7 @@ function ProductManager({ products, fetchProducts }) {
         } catch (err) { toast.error("Network Error"); }
     };
 
-    // SMART DELETE Product
+    // SMART DELETE Product (Keep as is)
     const handleDelete = async (id) => {
         if (window.confirm("Delete this product? (If it has orders, it will be Archived instead)")) {
             try {
@@ -66,7 +73,7 @@ function ProductManager({ products, fetchProducts }) {
         }
     };
 
-    // EDIT Handlers
+    // EDIT Handlers (Keep as is)
     const openEditModal = (product) => {
         setEditData(product); 
         setShowEditModal(true);
@@ -94,17 +101,19 @@ function ProductManager({ products, fetchProducts }) {
             toast.error("Update error");
         }
     };
+    // --- END HANDLERS ---
 
+    // --- RENDER FUNCTION (UPDATED UI) ---
     return (
         <div className="animate__animated animate__fadeIn">
             <div className="d-flex justify-content-between align-items-center mb-4">
                 <h3 className="mb-0">Inventory</h3>
-                <Button variant={showForm ? "secondary" : "primary"} onClick={() => setShowForm(!showForm)}>
-                    {showForm ? "Cancel" : "+ Add New Product"}
+                <Button variant={showForm ? "secondary" : "success"} onClick={() => setShowForm(!showForm)}>
+                    {showForm ? "Cancel Add" : "+ Add New Product"}
                 </Button>
             </div>
 
-            {/* ADD FORM */}
+            {/* ADD FORM (Keep as is) */}
             {showForm && (
                 <Card className="mb-4 shadow-sm border-0 bg-light">
                     <Card.Body>
@@ -129,28 +138,55 @@ function ProductManager({ products, fetchProducts }) {
                 </Card>
             )}
 
-            {/* SEARCH BAR */}
-            <InputGroup className="mb-3 shadow-sm">
-                <InputGroup.Text className="bg-white border-0">🔍</InputGroup.Text>
-                <Form.Control 
-                    placeholder="Search by name or ID..." 
-                    className="border-0"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                />
-            </InputGroup>
+            {/* SEARCH & FILTER BAR (NEW/UPDATED) */}
+            <Card className="mb-4 shadow-sm border-0 p-3">
+                <Row className="g-2">
+                    <Col md={9}>
+                        <InputGroup>
+                            <InputGroup.Text className="bg-white border-end-0">🔍</InputGroup.Text>
+                            <Form.Control 
+                                placeholder="Search by name or ID..." 
+                                className="border-start-0"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
+                        </InputGroup>
+                    </Col>
+                    <Col md={3}>
+                        <Form.Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                            <option value="ALL">All Statuses</option>
+                            <option value="ACTIVE">Active</option>
+                            <option value="HIDDEN">Hidden/Archived</option>
+                        </Form.Select>
+                    </Col>
+                </Row>
+            </Card>
 
-            {/* PRODUCT TABLE */}
+
+            {/* PRODUCT TABLE (UPDATED UI) */}
             <Card className="border-0 shadow-sm">
                 <Table hover responsive className="mb-0 align-middle">
-                    <thead className="bg-light"><tr><th>Img</th><th>Name</th><th>Price</th><th>Status</th><th>Actions</th></tr></thead>
+                    <thead className="bg-light"><tr><th>Img</th><th>Name (ID)</th><th>Price</th><th>Status</th><th>Actions</th></tr></thead>
                     <tbody>
                         {filteredProducts.map(p => (
                             <tr key={p.product_id}>
-                                <td><img src={`/images/${p.product_id}.jpg`} alt="mini" width="40" height="40" className="rounded" onError={(e)=>{e.target.onerror=null;e.target.src="https://placehold.co/40"}}/></td>
-                                <td className="fw-bold">{p.name}</td>
-                                <td>৳{p.base_price}</td>
-                                <td><Badge bg={p.is_active ? 'success' : 'secondary'}>{p.is_active ? 'Active' : 'Hidden'}</Badge></td>
+                                <td>
+                                    <img 
+                                        src={`/images/${p.product_id}.jpg`} 
+                                        alt="mini" 
+                                        width="40" 
+                                        height="40" 
+                                        className="rounded" 
+                                        style={{objectFit: 'cover'}}
+                                        onError={(e)=>{e.target.onerror=null;e.target.src="https://placehold.co/40"}}
+                                    />
+                                </td>
+                                <td>
+                                    <span className="fw-bold">{p.name}</span>
+                                    <small className="text-muted d-block">ID: {p.product_id}</small>
+                                </td>
+                                <td>৳{parseFloat(p.base_price).toLocaleString()}</td>
+                                <td><Badge bg={p.is_active ? 'success' : 'secondary'}>{p.is_active ? 'ACTIVE' : 'HIDDEN'}</Badge></td>
                                 <td>
                                     <Button variant="link" className="text-decoration-none p-0 me-3" onClick={() => openEditModal(p)}>Edit</Button>
                                     <Button variant="link" className="text-danger text-decoration-none p-0" onClick={() => handleDelete(p.product_id)}>Delete</Button>
@@ -159,9 +195,12 @@ function ProductManager({ products, fetchProducts }) {
                         ))}
                     </tbody>
                 </Table>
+                {filteredProducts.length === 0 && (
+                    <p className="text-center text-muted p-4 mb-0">No products found.</p>
+                )}
             </Card>
 
-            {/* EDIT MODAL */}
+            {/* EDIT MODAL (Keep as is) */}
             <Modal show={showEditModal} onHide={() => setShowEditModal(false)}>
                 <Modal.Header closeButton>
                     <Modal.Title>Edit Product</Modal.Title>
@@ -203,7 +242,6 @@ function ProductManager({ products, fetchProducts }) {
         </div>
     );
 }
-
 // --- SUB-COMPONENT: ORDER MANAGER ---
 function OrderManager({ orders, fetchOrders }) {
     const totalRevenue = orders.reduce((sum, order) => sum + parseFloat(order.total_amount), 0).toFixed(2);
