@@ -22,14 +22,16 @@ import './App.css';
 // --- COMPONENT: NAVIGATION (Restored Green/Gold) ---
 // client/src/App.js
 
+// client/src/App.js
+
 function NavBarContent() {
-    const { cartCount } = useCart();
+    // 👇 FIXED: changed 'cartCount' to 'totalItems' to match CartContext
+    const { totalItems } = useCart(); 
+
     return (
-        // zIndex ensures this stays ON TOP of the admin sidebar
         <Navbar variant="dark" expand="lg" className="navbar-custom sticky-top" style={{ zIndex: 1050 }}>
           <Container>
             <Navbar.Brand as={Link} to="/" className="d-flex align-items-center">
-              {/* Gold Border Logo */}
               <img
                 alt="Home Decor Logo"
                 src={logo}
@@ -38,7 +40,7 @@ function NavBarContent() {
                 className="d-inline-block align-top me-3 animate__animated animate__rotateIn" 
                 style={{
                     borderRadius: '50%', 
-                    border: '3px solid #A67B5B', // GOLD BORDER
+                    border: '3px solid #A67B5B', 
                     boxShadow: '0 4px 8px rgba(0,0,0,0.3)', 
                     padding: '2px', 
                     backgroundColor: 'white'
@@ -46,7 +48,6 @@ function NavBarContent() {
               />
               
               <div className="d-flex flex-column">
-                  {/* Main Brand Name */}
                   <span style={{ 
                       fontFamily: "'Playfair Display', serif", 
                       fontWeight: '700', 
@@ -60,14 +61,13 @@ function NavBarContent() {
                     Home Decor
                   </span>
                   
-                  {/* 👇 NEW MOTO UPDATED HERE */}
                   <span style={{
-                      fontSize: '0.65rem', // Slightly smaller for the motto look
+                      fontSize: '0.65rem',
                       letterSpacing: '2px',
                       textTransform: 'uppercase',
-                      color: '#A67B5B', // Gold color
+                      color: '#A67B5B', 
                       fontWeight: '600',
-                      fontStyle: 'italic' // Italic adds elegance
+                      fontStyle: 'italic'
                   }}>
                       Quality You Can Trust
                   </span>
@@ -91,9 +91,10 @@ function NavBarContent() {
                 <Nav.Link as={Link} to="/admin" className="mx-2 text-uppercase fw-bold" style={{fontSize: '0.9rem', letterSpacing: '1px'}}>Admin</Nav.Link>
                 <Nav.Link as={Link} to="/cart" className="mx-2 position-relative text-uppercase fw-bold" style={{fontSize: '0.9rem', letterSpacing: '1px'}}>
                     Cart 
-                    {cartCount > 0 && 
+                    {/* 👇 FIXED: Using 'totalItems' here */}
+                    {totalItems > 0 && 
                       <Badge bg="warning" text="dark" pill className="position-absolute top-0 start-100 translate-middle shadow-sm">
-                        {cartCount}
+                        {totalItems}
                       </Badge>
                     }
                 </Nav.Link>

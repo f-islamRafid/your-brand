@@ -7,7 +7,7 @@ export function useCart() {
 }
 
 export function CartProvider({ children }) {
-    // 1. Initialize State from Local Storage (Load saved cart)
+    // 1. Initialize State from Local Storage
     const [cartItems, setCartItems] = useState(() => {
         try {
             const localData = localStorage.getItem('furniture_cart');
@@ -18,21 +18,25 @@ export function CartProvider({ children }) {
         }
     });
 
-    // 2. Save to Local Storage whenever cart changes
+    // 2. Save to Local Storage
     useEffect(() => {
         localStorage.setItem('furniture_cart', JSON.stringify(cartItems));
     }, [cartItems]);
 
-    // Calculate Total Price
-    const cartTotal = cartItems.reduce((total, item) => total + (item.base_price * item.quantity) + (item.price_modifier || 0) * item.quantity, 0).toFixed(2);
+    // --- 👇 FIXED: CALCULATE TOTAL CORRECTLY ---
+    // We use 'item.price' because that is what we saved in the cart object
+    const cartTotal = cartItems.reduce((total, item) => {
+        const itemPrice = parseFloat(item.price) || 0;
+        const itemQty = parseInt(item.quantity) || 1;
+        return total + (itemPrice * itemQty);
+    }, 0).toFixed(2);
     
     // Count Total Items
-    const totalItems = cartItems.reduce((count, item) => count + item.quantity, 0);
+    const totalItems = cartItems.reduce((count, item) => count + (parseInt(item.quantity) || 0), 0);
 
     // Function: Add to Cart
     const addToCart = (product, variant = null) => {
         setCartItems(prevItems => {
-            // Create a unique ID for the cart item (Product ID + Variant ID)
             const cartId = variant 
                 ? `${product.product_id}-${variant.variant_id}` 
                 : `${product.product_id}-base`;
@@ -40,19 +44,18 @@ export function CartProvider({ children }) {
             const existingItem = prevItems.find(item => item.cartId === cartId);
 
             if (existingItem) {
-                // If item exists, just increase quantity
                 return prevItems.map(item => 
                     item.cartId === cartId 
                         ? { ...item, quantity: item.quantity + 1 } 
                         : item
                 );
             } else {
-                // Add new item
                 return [...prevItems, {
                     cartId,
                     id: product.product_id,
                     name: product.name,
-                    image: product.image, // Assuming image path logic is handled in display
+                    image: product.image,
+                    // We save the FINAL price here
                     price: parseFloat(product.base_price) + (variant ? parseFloat(variant.price_modifier) : 0),
                     quantity: 1,
                     variant_id: variant ? variant.variant_id : null,
@@ -62,12 +65,10 @@ export function CartProvider({ children }) {
         });
     };
 
-    // Function: Remove from Cart
     const removeFromCart = (cartId) => {
         setCartItems(prevItems => prevItems.filter(item => item.cartId !== cartId));
     };
 
-    // Function: Update Quantity
     const updateQuantity = (cartId, newQuantity) => {
         if (newQuantity < 1) return;
         setCartItems(prevItems => 
@@ -77,7 +78,6 @@ export function CartProvider({ children }) {
         );
     };
 
-    // Function: Clear Cart (After payment)
     const clearCart = () => {
         setCartItems([]);
         localStorage.removeItem('furniture_cart');

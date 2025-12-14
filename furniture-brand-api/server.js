@@ -11,7 +11,7 @@ const PORT = 5000;
 // PostgreSQL Connection
 const pool = new Pool({
     user: 'myuser',
-    host: 'localhost', // ✅ FIXED: Set to localhost for local testing
+    host: 'localhost',
     database: 'furniture_db',
     password: 'mypassword',
     port: 5432,
@@ -27,7 +27,7 @@ const storage = multer.diskStorage({
     destination: (req, file, cb) => {
         // Save to client/public/images so React can see them
         const dir = path.join(__dirname, '../client/public/images');
-        if (!fs.existsSync(dir)){
+        if (!fs.existsSync(dir)) {
             fs.mkdirSync(dir, { recursive: true });
         }
         cb(null, dir);
@@ -80,7 +80,7 @@ app.get('/api/admin/products', async (req, res) => {
 app.post('/api/products', upload.single('image'), async (req, res) => {
     try {
         const { name, base_price, description, material } = req.body;
-        
+
         // Insert into Database
         const newProduct = await pool.query(
             "INSERT INTO products (name, base_price, description, material) VALUES($1, $2, $3, $4) RETURNING *",
@@ -147,24 +147,24 @@ app.get('/api/variants', async (req, res) => {
     }
 });
 
-// 8. Place Order (UPDATED FOR PAYMENT METHODS)
+// 8. Place Order (UPDATED FOR PAYMENT METHODS AND FIXED COLUMN NAME)
 app.post('/api/orders', async (req, res) => {
     const client = await pool.connect();
     try {
-        // ✅ NEW: Receiving paymentMethod and paymentStatus
+        // ✅ Receiving all required data
         const { cartItems, customerInfo, paymentMethod, paymentStatus } = req.body;
-        
+
         await client.query('BEGIN');
 
-        // ✅ NEW: Saving payment info to database
+        // 👇 FIXED: Changed 'email' to 'customer_email' to match the database error message
         const orderResult = await client.query(
-            "INSERT INTO orders (customer_name, shipping_address, total_amount, email, payment_method, payment_status) VALUES($1, $2, $3, $4, $5, $6) RETURNING order_id",
+            "INSERT INTO orders (customer_name, shipping_address, total_amount, customer_email, payment_method, payment_status) VALUES($1, $2, $3, $4, $5, $6) RETURNING order_id",
             [
-                customerInfo.name, 
-                customerInfo.address, 
-                customerInfo.total, 
-                customerInfo.email,
-                paymentMethod || 'COD', // Default to COD if missing
+                customerInfo.name,
+                customerInfo.address,
+                customerInfo.total,
+                customerInfo.email, // This is the value
+                paymentMethod || 'COD',
                 paymentStatus || 'Pending'
             ]
         );
@@ -187,7 +187,6 @@ app.post('/api/orders', async (req, res) => {
         client.release();
     }
 });
-
 // 9. Admin: Get Orders
 app.get('/api/orders', async (req, res) => {
     try {
@@ -219,7 +218,7 @@ app.get('/api/products/:id/reviews', async (req, res) => {
     try {
         const { id } = req.params;
         const result = await pool.query(
-            "SELECT * FROM reviews WHERE product_id = $1 ORDER BY created_at DESC", 
+            "SELECT * FROM reviews WHERE product_id = $1 ORDER BY created_at DESC",
             [id]
         );
         res.json(result.rows);
@@ -234,12 +233,12 @@ app.post('/api/products/:id/reviews', async (req, res) => {
     try {
         const { id } = req.params;
         const { user_name, rating, comment } = req.body;
-        
+
         const newReview = await pool.query(
             "INSERT INTO reviews (product_id, user_name, rating, comment) VALUES($1, $2, $3, $4) RETURNING *",
             [id, user_name, rating, comment]
         );
-        
+
         res.json(newReview.rows[0]);
     } catch (err) {
         console.error(err.message);
