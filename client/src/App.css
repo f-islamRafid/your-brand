@@ -77,4 +77,23 @@
     overflow: hidden;
     border-radius: 0 0 10px 10px; /* Optional: adds a subtle curve to the bottom edge */
 }
+/* --- HERO BUTTON STYLING --- */
+.hero-browse-btn {
+    background-color: #384236; /* Dark olive */
+    color: white;
+    border: 2px solid #A67B5B; /* Rustic Gold border */
+    padding: 15px 40px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    border-radius: 50px;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+}
 
+.hero-browse-btn:hover {
+    background-color: #4A5D45; 
+    border-color: white;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+    transform: translateY(-2px);
+    color: white;
+}
