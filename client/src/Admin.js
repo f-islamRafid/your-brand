@@ -297,7 +297,7 @@ function OrderManager({ orders, fetchOrders }) {
                         </Card.Body>
                     </Card>
                 </Col>
-                {/* You can add a third card here, e.g., Pending Orders */}
+                
             </Row>
 
             {/* ORDER LIST (UPDATED STYLING) */}
