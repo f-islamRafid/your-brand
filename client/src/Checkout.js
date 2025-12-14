@@ -1,166 +1,241 @@
-// client/src/Checkout.js
-import React, { useState } from 'react';
-import { Container, Row, Col, Form, Button, Card, ListGroup, Alert } from 'react-bootstrap';
+import React, { useState, useEffect } from 'react';
+import { Container, Row, Col, Card, Form, Button, Modal, Spinner, Badge } from 'react-bootstrap';
 import { useCart } from './CartContext';
 import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 
 function Checkout() {
-    const { cart, clearCart } = useCart();
+    // 1. Get cart items
+    const { cartItems = [], cartTotal, clearCart } = useCart(); 
     const navigate = useNavigate();
+
+    // 2. Add local loading state to wait for hydration
+    const [isCartReady, setIsCartReady] = useState(false);
+
+    const [step, setStep] = useState(1); 
+    const [formData, setFormData] = useState({ name: '', email: '', address: '', city: '' });
+    const [paymentMethod, setPaymentMethod] = useState('COD'); 
+    const [processing, setProcessing] = useState(false);
     
-    // Calculate total for summary
-    const total = cart.reduce((acc, item) => acc + (parseFloat(item.price) * item.quantity), 0);
+    // Mock Payment Modal State
+    const [showPayModal, setShowPayModal] = useState(false);
+    const [payProcessing, setPayProcessing] = useState(false);
 
-    const [formData, setFormData] = useState({
-        fullName: '',
-        email: '',
-        address: '',
-        city: '',
-        zip: '',
-        cardName: '',
-        cardNumber: ''
-    });
+    // 3. useEffect to check cart on load
+    useEffect(() => {
+        // If cart has items, we are ready.
+        if (cartItems.length > 0) {
+            setIsCartReady(true);
+        } else {
+            // If empty, wait a tiny bit to be sure it's not just lagging
+            const timer = setTimeout(() => {
+                setIsCartReady(true); 
+            }, 500); 
+            return () => clearTimeout(timer);
+        }
+    }, [cartItems]);
 
-    const [orderPlaced, setOrderPlaced] = useState(false);
+    const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
-    const handleChange = (e) => {
-        setFormData({...formData, [e.target.name]: e.target.value });
+    const handleShippingSubmit = (e) => {
+        e.preventDefault();
+        setStep(2); 
     };
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        
-        const orderData = {
-            customer_name: formData.fullName,
-            customer_email: formData.email,
-            shipping_address: `${formData.address}, ${formData.city} ${formData.zip}`,
-            total_amount: total,
-            items: cart
-        };
-
+    const placeOrder = async (status = 'Pending') => {
+        setProcessing(true);
         try {
-            const response = await fetch('/api/orders', {
+            const orderData = {
+                customerInfo: { ...formData, total: cartTotal },
+                cartItems: cartItems,
+                paymentMethod: paymentMethod,
+                paymentStatus: status
+            };
+
+            const res = await fetch('/api/orders', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(orderData)
             });
 
-            if (response.ok) {
-                // Success!
-                setOrderPlaced(true);
-                setTimeout(() => {
-                    clearCart(); 
-                    navigate('/'); 
-                }, 3000);
+            if (res.ok) {
+                const data = await res.json();
+                toast.success(`Order Placed! ID: ${data.orderId}`);
+                clearCart();
+                navigate('/'); 
             } else {
-                alert("Failed to place order. Please try again.");
+                toast.error("Order failed. Please try again.");
             }
-        } catch (error) {
-            console.error("Error:", error);
-            alert("Network error.");
+        } catch (err) {
+            toast.error("Network Error");
+        }
+        setProcessing(false);
+    };
+
+    const handlePayment = () => {
+        if (paymentMethod === 'COD') {
+            placeOrder('Pending'); 
+        } else {
+            setShowPayModal(true);
         }
     };
 
-    if (cart.length === 0 && !orderPlaced) {
-        return <Container className="mt-5"><Alert variant="warning">Your cart is empty.</Alert></Container>;
+    const confirmOnlinePayment = () => {
+        setPayProcessing(true);
+        setTimeout(() => {
+            setPayProcessing(false);
+            setShowPayModal(false);
+            placeOrder('Paid'); 
+            toast.success("Payment Successful!", { icon: '💳' });
+        }, 2000);
+    };
+
+    // 4. Show loading spinner while checking cart
+    if (!isCartReady && cartItems.length === 0) {
+        return <Container className="py-5 text-center"><Spinner animation="border" /></Container>;
     }
 
-    if (orderPlaced) {
+    // 5. NOW check if empty
+    if (cartItems.length === 0) {
         return (
-            <Container className="mt-5 text-center p-5 bg-light rounded">
-                <h1 className="text-success mb-3">🎉 Order Placed Successfully!</h1>
-                <p className="lead">Thank you, {formData.fullName}!</p>
-                <p>Your order for <strong>${total.toFixed(2)}</strong> is being processed.</p>
-                <p className="text-muted">Redirecting you to the home page...</p>
+            <Container className="py-5 text-center animate__animated animate__fadeIn">
+                <div className="mb-4" style={{ fontSize: '4rem' }}>🛒</div>
+                <h3 className="mb-3">Your cart is empty</h3>
+                <p className="text-muted mb-4">Looks like you haven't added any furniture yet.</p>
+                <Button variant="dark" onClick={() => navigate('/shop')}>Start Shopping</Button>
             </Container>
         );
     }
 
     return (
-        <Container className="py-5">
-            <h2 className="mb-4">Checkout</h2>
+        <Container className="py-5 animate__animated animate__fadeIn">
+            <h2 className="mb-4 fw-bold" style={{ fontFamily: 'Playfair Display, serif' }}>Checkout</h2>
+            
             <Row>
-                {/* Left Column: Billing Form */}
+                {/* LEFT: Forms */}
                 <Col md={8}>
-                    <Card className="p-4 shadow-sm mb-4">
-                        <Card.Title className="mb-3">Shipping & Payment</Card.Title>
-                        <Form onSubmit={handleSubmit}>
-                            <Row>
-                                <Col md={6} className="mb-3">
-                                    <Form.Group>
-                                        <Form.Label>Full Name</Form.Label>
-                                        <Form.Control type="text" name="fullName" required onChange={handleChange} placeholder="John Doe" />
-                                    </Form.Group>
-                                </Col>
-                                <Col md={6} className="mb-3">
-                                    <Form.Group>
-                                        <Form.Label>Email</Form.Label>
-                                        <Form.Control type="email" name="email" required onChange={handleChange} placeholder="john@example.com" />
-                                    </Form.Group>
-                                </Col>
-                            </Row>
+                    {step === 1 ? (
+                        /* STEP 1: SHIPPING */
+                        <Card className="shadow-sm border-0 mb-4">
+                            <Card.Header className="bg-white py-3"><h5 className="mb-0">1. Shipping Information</h5></Card.Header>
+                            <Card.Body className="p-4">
+                                <Form onSubmit={handleShippingSubmit}>
+                                    <Row>
+                                        <Col md={6} className="mb-3"><Form.Control placeholder="Full Name" name="name" required onChange={handleChange} /></Col>
+                                        <Col md={6} className="mb-3"><Form.Control type="email" placeholder="Email Address" name="email" required onChange={handleChange} /></Col>
+                                    </Row>
+                                    <Form.Group className="mb-3"><Form.Control placeholder="Address (House, Road, Area)" name="address" required onChange={handleChange} /></Form.Group>
+                                    <Form.Group className="mb-4"><Form.Control placeholder="City / District" name="city" required onChange={handleChange} /></Form.Group>
+                                    <Button variant="dark" type="submit" className="px-4">Continue to Payment &rarr;</Button>
+                                </Form>
+                            </Card.Body>
+                        </Card>
+                    ) : (
+                        /* STEP 2: PAYMENT METHOD */
+                        <Card className="shadow-sm border-0 mb-4">
+                            <Card.Header className="bg-white py-3 d-flex justify-content-between align-items-center">
+                                <h5 className="mb-0">2. Payment Method</h5>
+                                <Button variant="link" size="sm" onClick={() => setStep(1)}>Change Shipping</Button>
+                            </Card.Header>
+                            <Card.Body className="p-4">
+                                {/* OPTION 1: COD */}
+                                <div 
+                                    className={`p-3 border rounded mb-3 d-flex align-items-center cursor-pointer ${paymentMethod === 'COD' ? 'border-primary bg-light' : ''}`}
+                                    onClick={() => setPaymentMethod('COD')}
+                                    style={{ cursor: 'pointer', transition: '0.2s' }}
+                                >
+                                    <Form.Check type="radio" name="pay" checked={paymentMethod === 'COD'} readOnly className="me-3" />
+                                    <div>
+                                        <strong>Cash on Delivery (COD)</strong>
+                                        <p className="mb-0 text-muted small">Pay with cash when your furniture arrives.</p>
+                                    </div>
+                                    <div className="ms-auto h2 mb-0">💵</div>
+                                </div>
 
-                            <Form.Group className="mb-3">
-                                <Form.Label>Address</Form.Label>
-                                <Form.Control type="text" name="address" required onChange={handleChange} placeholder="123 Main St" />
-                            </Form.Group>
+                                {/* OPTION 2: ONLINE (BKASH/CARDS) */}
+                                <div 
+                                    className={`p-3 border rounded mb-3 d-flex align-items-center cursor-pointer ${paymentMethod === 'ONLINE' ? 'border-primary bg-light' : ''}`}
+                                    onClick={() => setPaymentMethod('ONLINE')}
+                                    style={{ cursor: 'pointer', transition: '0.2s' }}
+                                >
+                                    <Form.Check type="radio" name="pay" checked={paymentMethod === 'ONLINE'} readOnly className="me-3" />
+                                    <div className="flex-grow-1">
+                                        <strong>Online Payment</strong>
+                                        <p className="mb-0 text-muted small">Secure payment via SSLCommerz</p>
+                                        <div className="d-flex gap-2 mt-2">
+                                            {/* PAYMENT LOGOS */}
+                                            <Badge bg="danger">Bkash</Badge>
+                                            <Badge bg="warning" text="dark">Nagad</Badge>
+                                            <Badge bg="primary">Visa</Badge>
+                                            <Badge bg="dark">Mastercard</Badge>
+                                            <Badge bg="info">Amex</Badge>
+                                        </div>
+                                    </div>
+                                </div>
 
-                            <Row>
-                                <Col md={6} className="mb-3">
-                                    <Form.Group>
-                                        <Form.Label>City</Form.Label>
-                                        <Form.Control type="text" name="city" required onChange={handleChange} />
-                                    </Form.Group>
-                                </Col>
-                                <Col md={6} className="mb-3">
-                                    <Form.Group>
-                                        <Form.Label>Zip Code</Form.Label>
-                                        <Form.Control type="text" name="zip" required onChange={handleChange} />
-                                    </Form.Group>
-                                </Col>
-                            </Row>
-
-                            <hr className="my-4" />
-                            <h5 className="mb-3">Payment Details (Mock)</h5>
-                            
-                            <Form.Group className="mb-3">
-                                <Form.Label>Name on Card</Form.Label>
-                                <Form.Control type="text" name="cardName" required onChange={handleChange} />
-                            </Form.Group>
-                            <Form.Group className="mb-3">
-                                <Form.Label>Card Number</Form.Label>
-                                <Form.Control type="text" name="cardNumber" placeholder="0000 0000 0000 0000" required onChange={handleChange} />
-                            </Form.Group>
-
-                            <Button variant="primary" size="lg" type="submit" className="w-100 mt-3">
-                                Place Order (${total.toFixed(2)})
-                            </Button>
-                        </Form>
-                    </Card>
+                                <Button variant="success" size="lg" className="w-100 mt-3" onClick={handlePayment} disabled={processing}>
+                                    {processing ? <Spinner size="sm" animation="border" /> : (paymentMethod === 'COD' ? `Place Order (৳${cartTotal})` : `Pay Now (৳${cartTotal})`)}
+                                </Button>
+                            </Card.Body>
+                        </Card>
+                    )}
                 </Col>
 
-                {/* Right Column: Order Summary */}
+                {/* RIGHT: Order Summary */}
                 <Col md={4}>
-                    <Card className="shadow-sm">
-                        <Card.Header>Your Items ({cart.length})</Card.Header>
-                        <ListGroup variant="flush">
-                            {cart.map((item, idx) => (
-                                <ListGroup.Item key={idx} className="d-flex justify-content-between align-items-center">
-                                    <div>
-                                        <div className="fw-bold">{item.name}</div>
-                                        <small className="text-muted">{item.variant_name} (x{item.quantity})</small>
-                                    </div>
-                                    <span>${(parseFloat(item.price) * item.quantity).toFixed(2)}</span>
-                                </ListGroup.Item>
+                    <Card className="border-0 shadow-sm bg-light">
+                        <Card.Body>
+                            <h5 className="mb-3">Order Summary</h5>
+                            {cartItems.map(item => (
+                                <div key={item.cartId} className="d-flex justify-content-between mb-2 small">
+                                    <span>{item.name} x {item.quantity}</span>
+                                    <span>৳{item.price * item.quantity}</span>
+                                </div>
                             ))}
-                            <ListGroup.Item className="d-flex justify-content-between fw-bold bg-light">
-                                <span>Total (USD)</span>
-                                <span>${total.toFixed(2)}</span>
-                            </ListGroup.Item>
-                        </ListGroup>
+                            <hr />
+                            <div className="d-flex justify-content-between fw-bold fs-5">
+                                <span>Total</span>
+                                <span>৳{cartTotal}</span>
+                            </div>
+                        </Card.Body>
                     </Card>
                 </Col>
             </Row>
+
+            {/* --- MOCK PAYMENT GATEWAY MODAL --- */}
+            <Modal show={showPayModal} onHide={() => setShowPayModal(false)} centered backdrop="static">
+                <Modal.Header closeButton className="bg-light">
+                    <Modal.Title>
+                        <span className="me-2">🔒</span> Secure Payment Gateway
+                    </Modal.Title>
+                </Modal.Header>
+                <Modal.Body className="p-4 text-center">
+                    <p className="text-muted mb-4">Simulating transaction...</p>
+                    
+                    {/* Mock Card Input */}
+                    <div className="text-start bg-white p-3 border rounded mb-4 shadow-sm">
+                        <div className="d-flex justify-content-between mb-3">
+                            <span className="fw-bold">Pay With:</span>
+                            <div>
+                                <span className="me-2 text-primary fw-bold">VISA</span>
+                                <span className="text-danger fw-bold">bkash</span>
+                            </div>
+                        </div>
+                        <Form.Control placeholder="Card / Mobile Number" className="mb-2" />
+                        <Row>
+                            <Col><Form.Control placeholder="MM/YY" /></Col>
+                            <Col><Form.Control placeholder="CVC / PIN" type="password" /></Col>
+                        </Row>
+                    </div>
+
+                    <div className="d-grid gap-2">
+                        <Button variant="success" size="lg" onClick={confirmOnlinePayment} disabled={payProcessing}>
+                            {payProcessing ? 'Processing Transaction...' : `Confirm Payment ৳${cartTotal}`}
+                        </Button>
+                        <Button variant="link" onClick={() => setShowPayModal(false)} className="text-muted text-decoration-none">Cancel Transaction</Button>
+                    </div>
+                </Modal.Body>
+            </Modal>
         </Container>
     );
 }

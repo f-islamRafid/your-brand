@@ -11,8 +11,7 @@ const PORT = 5000;
 // PostgreSQL Connection
 const pool = new Pool({
     user: 'myuser',
-    // 👇 FIXED: Changed from 'furniture-db-pg' to 'localhost'
-    host: 'localhost', 
+    host: 'localhost', // ✅ FIXED: Set to localhost for local testing
     database: 'furniture_db',
     password: 'mypassword',
     port: 5432,
@@ -148,16 +147,26 @@ app.get('/api/variants', async (req, res) => {
     }
 });
 
-// 8. Place Order
+// 8. Place Order (UPDATED FOR PAYMENT METHODS)
 app.post('/api/orders', async (req, res) => {
     const client = await pool.connect();
     try {
-        const { cartItems, customerInfo } = req.body;
+        // ✅ NEW: Receiving paymentMethod and paymentStatus
+        const { cartItems, customerInfo, paymentMethod, paymentStatus } = req.body;
+        
         await client.query('BEGIN');
 
+        // ✅ NEW: Saving payment info to database
         const orderResult = await client.query(
-            "INSERT INTO orders (customer_name, shipping_address, total_amount, email) VALUES($1, $2, $3, $4) RETURNING order_id",
-            [customerInfo.name, customerInfo.address, customerInfo.total, customerInfo.email]
+            "INSERT INTO orders (customer_name, shipping_address, total_amount, email, payment_method, payment_status) VALUES($1, $2, $3, $4, $5, $6) RETURNING order_id",
+            [
+                customerInfo.name, 
+                customerInfo.address, 
+                customerInfo.total, 
+                customerInfo.email,
+                paymentMethod || 'COD', // Default to COD if missing
+                paymentStatus || 'Pending'
+            ]
         );
         const orderId = orderResult.rows[0].order_id;
 
@@ -237,7 +246,6 @@ app.post('/api/products/:id/reviews', async (req, res) => {
         res.status(500).send("Server Error");
     }
 });
-
 
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
