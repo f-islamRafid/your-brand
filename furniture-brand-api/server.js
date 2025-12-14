@@ -11,7 +11,8 @@ const PORT = 5000;
 // PostgreSQL Connection
 const pool = new Pool({
     user: 'myuser',
-    host: 'furniture-db-pg',
+    // 👇 FIXED: Changed from 'furniture-db-pg' to 'localhost'
+    host: 'localhost', 
     database: 'furniture_db',
     password: 'mypassword',
     port: 5432,
