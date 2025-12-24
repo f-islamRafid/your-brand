@@ -1,3 +1,6 @@
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+
 require('dotenv').config(); // Load environment variables
 const express = require('express');
 const cors = require('cors');
@@ -35,6 +38,21 @@ pool.connect((err, client, release) => {
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+const authenticateToken = (req, res, next) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1]; // Extract 'TOKEN' from 'Bearer TOKEN'
+
+    if (!token) return res.status(401).json({ message: "Access Denied: No Token Provided" });
+
+    jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+        if (err) return res.status(403).json({ message: "Invalid or Expired Token" });
+        req.user = user; // Attach the user data to the request
+        next(); // Move to the next step
+    });
+};
+
+
 
 // --- IMAGE UPLOAD CONFIGURATION (MULTER) ---
 const storage = multer.diskStorage({
@@ -183,9 +201,10 @@ app.post('/api/orders', async (req, res) => {
     }
 });
 
-// 9. Admin: Get Orders
-app.get('/api/orders', async (req, res) => {
+// 9. Admin: Get Orders (PROTECTED)
+app.get('/api/orders', authenticateToken, async (req, res) => {
     try {
+        // Only reaches here if authenticateToken calls next()
         const orders = await pool.query("SELECT * FROM orders ORDER BY order_id DESC");
         res.json(orders.rows);
     } catch (err) {
@@ -286,3 +305,74 @@ app.delete('/api/admin/reviews/:id', async (req, res) => {
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
+
+// --- USER AUTHENTICATION: REGISTER ---
+app.post('/api/register', async (req, res) => {
+    try {
+        const { username, email, password } = req.body;
+
+        // 1. Check if user already exists
+        const userExist = await pool.query("SELECT * FROM users WHERE email = $1", [email]);
+        if (userExist.rows.length > 0) {
+            return res.status(400).json({ message: "User already exists with this email" });
+        }
+
+        // 2. Hash the password (slow down the process for security)
+        const salt = await bcrypt.genSalt(10);
+        const hashedEmail = await bcrypt.hash(password, salt);
+
+        // 3. Save to database
+        const newUser = await pool.query(
+            "INSERT INTO users (username, email, password_hash) VALUES ($1, $2, $3) RETURNING user_id, username, email, role",
+            [username, email, hashedEmail]
+        );
+
+        res.json({ message: "User registered successfully!", user: newUser.rows[0] });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send("Server Error during registration");
+    }
+});
+
+
+// --- USER AUTHENTICATION: LOGIN ---
+app.post('/api/login', async (req, res) => {
+    try {
+        const { email, password } = req.body;
+
+        // 1. Find the user
+        const userResult = await pool.query("SELECT * FROM users WHERE email = $1", [email]);
+        if (userResult.rows.length === 0) {
+            return res.status(401).json({ message: "Invalid Credentials" });
+        }
+
+        const user = userResult.rows[0];
+
+        // 2. Check if password matches
+        const isMatch = await bcrypt.compare(password, user.password_hash);
+        if (!isMatch) {
+            return res.status(401).json({ message: "Invalid Credentials" });
+        }
+
+        // 3. Create the JWT Token
+        // This token expires in 24 hours
+        const token = jwt.sign(
+            { user_id: user.user_id, role: user.role },
+            process.env.JWT_SECRET,
+            { expiresIn: '24h' }
+        );
+
+        res.json({
+            token,
+            user: { id: user.user_id, username: user.username, role: user.role }
+        });
+
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send("Server Error during login");
+    }
+});
+
+
+
+
