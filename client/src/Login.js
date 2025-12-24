@@ -7,19 +7,20 @@ function Login() {
     const [error, setError] = useState('');
     const navigate = useNavigate();
 
-    const handleLogin = (e) => {
-        e.preventDefault();
+    const handleLogin = async (e) => {
+    e.preventDefault();
+    try {
+        const res = await axios.post('http://localhost:5000/api/login', { email, password });
         
-        // --- SECURITY CHECK ---
-        // Change 'admin123' to whatever PIN you want
-        if (password === '008589') {
-            // Save a "token" in browser storage to remember we are logged in
-            localStorage.setItem('admin_token', 'true');
-            navigate('/admin'); // Send to dashboard
-        } else {
-            setError('Invalid Access PIN');
-        }
-    };
+        // This is the important part:
+        // It updates the state in App.js, which triggers the useEffect 
+        // to set the Axios headers and save to localStorage.
+        setToken(res.data.token); 
+        
+    } catch (err) {
+        setError(err.response?.data?.message || "Login Failed");
+    }
+};
 
     return (
         <Container className="d-flex align-items-center justify-content-center" style={{ minHeight: '80vh' }}>
