@@ -1,23 +1,17 @@
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-
-require('dotenv').config(); // Load environment variables
+require('dotenv').config(); // Load environment variables once at the very top
 const express = require('express');
 const cors = require('cors');
 const { Pool } = require('pg');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 const multer = require('multer'); 
 const path = require('path');
 const fs = require('fs');
 
 const app = express();
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
 
-// PostgreSQL Connection
-// Note: host is 'localhost' because your Docker DB is mapped to your local port 5432
-require('dotenv').config(); 
-const { Pool } = require('pg');
-
-// Use the variables from your .env file
+// --- DATABASE CONNECTION ---
 const pool = new Pool({
     user: process.env.DB_USER,
     host: process.env.DB_HOST,
@@ -26,7 +20,7 @@ const pool = new Pool({
     port: process.env.DB_PORT,
 });
 
-// Test the connection immediately on startup
+// Test the connection immediately
 pool.connect((err, client, release) => {
     if (err) {
         return console.error('❌ Database connection error:', err.stack);
@@ -35,24 +29,23 @@ pool.connect((err, client, release) => {
     release();
 });
 
-// Middleware
+// --- MIDDLEWARE ---
 app.use(cors());
 app.use(express.json());
 
+// Auth Middleware to protect routes
 const authenticateToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1]; // Extract 'TOKEN' from 'Bearer TOKEN'
+    const token = authHeader && authHeader.split(' ')[1]; 
 
     if (!token) return res.status(401).json({ message: "Access Denied: No Token Provided" });
 
     jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
         if (err) return res.status(403).json({ message: "Invalid or Expired Token" });
-        req.user = user; // Attach the user data to the request
-        next(); // Move to the next step
+        req.user = user; 
+        next(); 
     });
 };
-
-
 
 // --- IMAGE UPLOAD CONFIGURATION (MULTER) ---
 const storage = multer.diskStorage({
@@ -77,7 +70,6 @@ app.get('/api/products', async (req, res) => {
         const result = await pool.query("SELECT * FROM products WHERE is_active = true ORDER BY product_id ASC");
         res.json(result.rows);
     } catch (err) {
-        console.error(err.message);
         res.status(500).send("Server Error");
     }
 });
@@ -90,24 +82,22 @@ app.get('/api/products/:id', async (req, res) => {
         if (result.rows.length === 0) return res.status(404).json({ message: "Product not found" });
         res.json(result.rows[0]);
     } catch (err) {
-        console.error(err.message);
         res.status(500).send("Server Error");
     }
 });
 
-// 3. Admin: Get ALL Products (Active & Hidden)
-app.get('/api/admin/products', async (req, res) => {
+// 3. Admin: Get ALL Products
+app.get('/api/admin/products', authenticateToken, async (req, res) => {
     try {
         const result = await pool.query("SELECT * FROM products ORDER BY product_id ASC");
         res.json(result.rows);
     } catch (err) {
-        console.error(err.message);
         res.status(500).send("Server Error");
     }
 });
 
 // 4. Admin: Add New Product
-app.post('/api/products', upload.single('image'), async (req, res) => {
+app.post('/api/products', authenticateToken, upload.single('image'), async (req, res) => {
     try {
         const { name, base_price, description, material } = req.body;
         const newProduct = await pool.query(
@@ -123,13 +113,12 @@ app.post('/api/products', upload.single('image'), async (req, res) => {
         }
         res.json(product);
     } catch (err) {
-        console.error(err.message);
         res.status(500).send("Server Error");
     }
 });
 
 // 5. Admin: Update Product
-app.put('/api/products/:id', async (req, res) => {
+app.put('/api/products/:id', authenticateToken, async (req, res) => {
     try {
         const { id } = req.params;
         const { name, base_price, description, material, is_active } = req.body;
@@ -139,39 +128,26 @@ app.put('/api/products/:id', async (req, res) => {
         );
         res.json("Product updated!");
     } catch (err) {
-        console.error(err.message);
         res.status(500).send("Server Error");
     }
 });
 
-// 6. Admin: Delete/Archive Product
-app.delete('/api/products/:id', async (req, res) => {
+// 6. Admin: Delete Product
+app.delete('/api/products/:id', authenticateToken, async (req, res) => {
     try {
         const { id } = req.params;
         await pool.query("DELETE FROM products WHERE product_id = $1", [id]);
         res.json({ message: "Product permanently deleted." });
     } catch (err) {
         if (err.code === '23503') {
-            await pool.query("UPDATE products SET is_active = false WHERE product_id = $1", [req.params.id]);
+            await pool.query("UPDATE products SET is_active = false WHERE product_id = $1", [id]);
             return res.json({ message: "Product archived because it has order history." });
         }
-        console.error(err.message);
         res.status(500).json({ error: "Server Error" });
     }
 });
 
-// 7. Get All Variants
-app.get('/api/variants', async (req, res) => {
-    try {
-        const result = await pool.query("SELECT * FROM variants");
-        res.json(result.rows);
-    } catch (err) {
-        console.error(err.message);
-        res.status(500).send("Server Error");
-    }
-});
-
-// 8. Place Order
+// 7. Place Order
 app.post('/api/orders', async (req, res) => {
     const client = await pool.connect();
     try {
@@ -194,185 +170,82 @@ app.post('/api/orders', async (req, res) => {
         res.json({ orderId, message: "Order placed!" });
     } catch (err) {
         await client.query('ROLLBACK');
-        console.error(err.message);
         res.status(500).send("Server Error");
     } finally {
         client.release();
     }
 });
 
-// 9. Admin: Get Orders (PROTECTED)
+// 8. Admin: Get Orders
 app.get('/api/orders', authenticateToken, async (req, res) => {
     try {
-        // Only reaches here if authenticateToken calls next()
         const orders = await pool.query("SELECT * FROM orders ORDER BY order_id DESC");
         res.json(orders.rows);
     } catch (err) {
-        console.error(err.message);
         res.status(500).send("Server Error");
     }
 });
 
-// 10. Admin: Update Order Status
-app.put('/api/orders/:id/status', async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { status } = req.body;
-        await pool.query("UPDATE orders SET status = $1 WHERE order_id = $2", [status, id]);
-        res.json({ message: "Status updated" });
-    } catch (err) {
-        console.error(err.message);
-        res.status(500).send("Server Error");
-    }
-});
-
-// --- ⭐ REVIEW ROUTES (UPDATED FOR CORRECT SCHEMA) ---
-
-// 11. Get APPROVED Reviews for a Product (Public View)
-app.get('/api/products/:id/reviews', async (req, res) => {
-    try {
-        const { id } = req.params;
-        const result = await pool.query(
-            "SELECT * FROM reviews WHERE product_id = $1 AND status = 'APPROVED' ORDER BY created_at DESC",
-            [id]
-        );
-        res.json(result.rows);
-    } catch (err) {
-        console.error(err.message);
-        res.status(500).send("Server Error");
-    }
-});
-
-// 12. Add a Review (Public View)
-app.post('/api/products/:id/reviews', async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { customer_name, rating, content } = req.body; 
-        const newReview = await pool.query(
-            "INSERT INTO reviews (product_id, customer_name, rating, content) VALUES($1, $2, $3, $4) RETURNING *",
-            [id, customer_name, rating, content]
-        );
-        res.json(newReview.rows[0]);
-    } catch (err) {
-        console.error(err.message);
-        res.status(500).send("Server Error");
-    }
-});
-
-// 13. Admin: Get ALL Reviews with Product Names (For ReviewManager)
-app.get('/api/admin/reviews', async (req, res) => {
+// 9. Admin: Update Reviews
+app.get('/api/admin/reviews', authenticateToken, async (req, res) => {
     try {
         const result = await pool.query(`
-            SELECT 
-                r.review_id, r.product_id, r.customer_name, r.email, r.rating, 
-                r.content, r.status, r.created_at, p.name AS product_name
+            SELECT r.*, p.name AS product_name
             FROM reviews r
             JOIN products p ON r.product_id = p.product_id
             ORDER BY r.created_at DESC
         `);
         res.json(result.rows);
     } catch (err) {
-        console.error("Admin Fetch Error:", err.message);
         res.status(500).json({ error: "Failed to fetch reviews" });
     }
 });
 
-// 14. Admin: Update Review Status (Approve/Hide)
-app.put('/api/admin/reviews/:id/status', async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { status } = req.body;
-        await pool.query("UPDATE reviews SET status = $1 WHERE review_id = $2", [status, id]);
-        res.json({ message: "Review status updated" });
-    } catch (err) {
-        console.error(err.message);
-        res.status(500).json({ error: "Server Error" });
-    }
-});
-
-// 15. Admin: Delete Review
-app.delete('/api/admin/reviews/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-        await pool.query("DELETE FROM reviews WHERE review_id = $1", [id]);
-        res.json({ message: "Review deleted" });
-    } catch (err) {
-        console.error(err.message);
-        res.status(500).json({ error: "Server Error" });
-    }
-});
-
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-});
-
-// --- USER AUTHENTICATION: REGISTER ---
+// 10. AUTH: Register
 app.post('/api/register', async (req, res) => {
     try {
         const { username, email, password } = req.body;
-
-        // 1. Check if user already exists
         const userExist = await pool.query("SELECT * FROM users WHERE email = $1", [email]);
-        if (userExist.rows.length > 0) {
-            return res.status(400).json({ message: "User already exists with this email" });
-        }
+        if (userExist.rows.length > 0) return res.status(400).json({ message: "User already exists" });
 
-        // 2. Hash the password (slow down the process for security)
         const salt = await bcrypt.genSalt(10);
-        const hashedEmail = await bcrypt.hash(password, salt);
+        const hashedPassword = await bcrypt.hash(password, salt);
 
-        // 3. Save to database
         const newUser = await pool.query(
-            "INSERT INTO users (username, email, password_hash) VALUES ($1, $2, $3) RETURNING user_id, username, email, role",
-            [username, email, hashedEmail]
+            "INSERT INTO users (username, email, password_hash) VALUES ($1, $2, $3) RETURNING user_id, username, email",
+            [username, email, hashedPassword]
         );
-
         res.json({ message: "User registered successfully!", user: newUser.rows[0] });
     } catch (err) {
-        console.error(err.message);
         res.status(500).send("Server Error during registration");
     }
 });
 
-
-// --- USER AUTHENTICATION: LOGIN ---
+// 11. AUTH: Login
 app.post('/api/login', async (req, res) => {
     try {
         const { email, password } = req.body;
-
-        // 1. Find the user
         const userResult = await pool.query("SELECT * FROM users WHERE email = $1", [email]);
-        if (userResult.rows.length === 0) {
-            return res.status(401).json({ message: "Invalid Credentials" });
-        }
+        
+        if (userResult.rows.length === 0) return res.status(401).json({ message: "Invalid Credentials" });
 
         const user = userResult.rows[0];
-
-        // 2. Check if password matches
         const isMatch = await bcrypt.compare(password, user.password_hash);
-        if (!isMatch) {
-            return res.status(401).json({ message: "Invalid Credentials" });
-        }
+        if (!isMatch) return res.status(401).json({ message: "Invalid Credentials" });
 
-        // 3. Create the JWT Token
-        // This token expires in 24 hours
         const token = jwt.sign(
             { user_id: user.user_id, role: user.role },
             process.env.JWT_SECRET,
             { expiresIn: '24h' }
         );
 
-        res.json({
-            token,
-            user: { id: user.user_id, username: user.username, role: user.role }
-        });
-
+        res.json({ token, user: { id: user.user_id, username: user.username, role: user.role } });
     } catch (err) {
-        console.error(err.message);
         res.status(500).send("Server Error during login");
     }
 });
 
-
-
-
+// --- START SERVER ---
+app.listen(PORT, () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+});

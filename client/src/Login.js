@@ -1,68 +1,43 @@
 import React, { useState } from 'react';
-import { Container, Card, Form, Button, Alert } from 'react-bootstrap';
-import axios from 'axios'; // Added this
+import { Container, Form, Button, Card } from 'react-bootstrap';
+import axios from 'axios';
+import toast from 'react-hot-toast';
 
-function Login({ setToken }) { // Destructured setToken from props
-    const [email, setEmail] = useState(''); // Added email state
+function Login({ setToken }) { // Receive setToken from App.js
+    const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [error, setError] = useState('');
 
     const handleLogin = async (e) => {
         e.preventDefault();
         try {
-            // Note: Use your actual backend URL
-            const res = await axios.post('http://localhost:5000/api/login', { email, password });
+            const res = await axios.post('http://localhost:5000/api/auth/login', { email, password });
             
-            // This updates the token in App.js
-            setToken(res.data.token); 
-            
+            if (res.data.token) {
+                // This updates App.js and triggers the useEffect to save it
+                setToken(res.data.token); 
+                toast.success("Welcome, Admin!");
+            }
         } catch (err) {
-            setError(err.response?.data?.message || "Login Failed. Check credentials.");
+            toast.error("Invalid Credentials");
         }
     };
 
     return (
         <Container className="d-flex align-items-center justify-content-center" style={{ minHeight: '80vh' }}>
-            <Card className="shadow-lg border-0 p-4 animate__animated animate__fadeInDown" style={{ maxWidth: '400px', width: '100%', borderRadius: '15px' }}>
-                <Card.Body>
-                    <div className="text-center mb-4">
-                        <h2 className="mb-1">Admin Access</h2>
-                        <p className="text-muted small">Enter your credentials</p>
-                    </div>
-
-                    {error && <Alert variant="danger" className="py-2 text-center">{error}</Alert>}
-
+            <Card className="shadow-lg border-0" style={{ width: '400px' }}>
+                <Card.Body className="p-5">
+                    <h2 className="text-center mb-4 fw-bold">Admin Login</h2>
                     <Form onSubmit={handleLogin}>
                         <Form.Group className="mb-3">
-                            <Form.Label className="text-muted small fw-bold text-uppercase">Email</Form.Label>
-                            <Form.Control 
-                                type="email" 
-                                placeholder="admin@example.com" 
-                                value={email} 
-                                onChange={(e) => setEmail(e.target.value)}
-                                required
-                            />
+                            <Form.Label>Email</Form.Label>
+                            <Form.Control type="email" onChange={(e) => setEmail(e.target.value)} required />
                         </Form.Group>
-
                         <Form.Group className="mb-4">
-                            <Form.Label className="text-muted small fw-bold text-uppercase">Password</Form.Label>
-                            <Form.Control 
-                                type="password" 
-                                placeholder="••••••••" 
-                                value={password} 
-                                onChange={(e) => setPassword(e.target.value)}
-                                required
-                            />
+                            <Form.Label>Password</Form.Label>
+                            <Form.Control type="password" onChange={(e) => setPassword(e.target.value)} required />
                         </Form.Group>
-
-                        <Button variant="success" type="submit" className="w-100 py-2 fw-bold">
-                            Unlock Dashboard
-                        </Button>
+                        <Button variant="success" type="submit" className="w-100">Login</Button>
                     </Form>
-                    
-                    <div className="text-center mt-4">
-                        <a href="/" className="text-muted small text-decoration-none">&larr; Return to Shop</a>
-                    </div>
                 </Card.Body>
             </Card>
         </Container>

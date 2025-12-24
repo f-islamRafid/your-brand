@@ -180,13 +180,13 @@ function App() {
 
   useEffect(() => {
     if (token) {
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      localStorage.setItem('admin_token', token);
+        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        localStorage.setItem('admin_token', token);
     } else {
-      delete axios.defaults.headers.common['Authorization'];
-      localStorage.removeItem('admin_token');
+        delete axios.defaults.headers.common['Authorization'];
+        localStorage.removeItem('admin_token');
     }
-  }, [token]);
+}, [token]);
 
   const handleLogout = () => {
     setToken(null);
@@ -197,11 +197,18 @@ function App() {
         <Router>
           <div className="App d-flex flex-column min-vh-100">
             <Toaster position="top-center" />
-            <NavBarContent />
+            
+            {/* 1. Only show Shop Navbar if NOT in admin */}
+            <Routes>
+               <Route path="/admin/*" element={null} />
+               <Route path="*" element={<NavBarContent />} />
+            </Routes>
+
+            {/* 2. Your Hero and Trust sections already have path checks inside them, which is good! */}
             <HeroSection />
             <TrustSection />
 
-            <Container className="flex-grow-1">
+            <Container fluid={window.location.pathname.includes('/admin')} className="flex-grow-1">
               <Routes>
                 <Route path="/" element={<ProductList />} />
                 <Route path="/product/:id" element={<ProductDetail />} />
@@ -224,11 +231,14 @@ function App() {
               </Routes>
             </Container>
 
-            <Footer />
+            {/* 3. Hide footer in Admin for a cleaner look */}
+            <Routes>
+               <Route path="/admin/*" element={null} />
+               <Route path="*" element={<Footer />} />
+            </Routes>
           </div>
         </Router>
     </CartProvider>
-  );
-}
+  )};
 
 export default App;
