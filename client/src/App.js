@@ -1,7 +1,8 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
 import { Navbar, Container, Nav, Badge, Row, Col, Form, Button, Alert } from 'react-bootstrap';
 import { Toaster } from 'react-hot-toast'; 
+import axios from 'axios'; // Added this
 import logo from './assets/logo.png'; 
 
 // Context
@@ -19,13 +20,8 @@ import ProtectedRoute from './ProtectedRoute';
 
 import './App.css'; 
 
-// --- COMPONENT: NAVIGATION (Restored Green/Gold) ---
-// client/src/App.js
-
-// client/src/App.js
-
+// --- COMPONENT: NAVIGATION ---
 function NavBarContent() {
-    // 👇 FIXED: changed 'cartCount' to 'totalItems' to match CartContext
     const { totalItems } = useCart(); 
 
     return (
@@ -81,24 +77,22 @@ function NavBarContent() {
                   type="search"
                   placeholder="Search for furniture..."
                   className="me-2 rounded-pill border-0 shadow-sm"
-                  aria-label="Search"
                   style={{ background: 'rgba(255,255,255,0.15)', color: 'white', backdropFilter: 'blur(5px)' }}
                 />
               </Form>
 
               <Nav className="ms-auto">
-                <Nav.Link as={Link} to="/" className="mx-2 text-uppercase fw-bold" style={{fontSize: '0.9rem', letterSpacing: '1px'}}>Shop</Nav.Link>
-                <Nav.Link as={Link} to="/admin" className="mx-2 text-uppercase fw-bold" style={{fontSize: '0.9rem', letterSpacing: '1px'}}>Admin</Nav.Link>
-                <Nav.Link as={Link} to="/cart" className="mx-2 position-relative text-uppercase fw-bold" style={{fontSize: '0.9rem', letterSpacing: '1px'}}>
+                <Nav.Link as={Link} to="/" className="mx-2 text-uppercase fw-bold">Shop</Nav.Link>
+                <Nav.Link as={Link} to="/admin" className="mx-2 text-uppercase fw-bold">Admin</Nav.Link>
+                <Nav.Link as={Link} to="/cart" className="mx-2 position-relative text-uppercase fw-bold">
                     Cart 
-                    {/* 👇 FIXED: Using 'totalItems' here */}
                     {totalItems > 0 && 
-                      <Badge bg="warning" text="dark" pill className="position-absolute top-0 start-100 translate-middle shadow-sm">
+                      <Badge bg="warning" text="dark" pill className="position-absolute top-0 start-100 translate-middle">
                         {totalItems}
                       </Badge>
                     }
                 </Nav.Link>
-                <Nav.Link as={Link} to="/contact" className="mx-2 text-uppercase fw-bold" style={{fontSize: '0.9rem', letterSpacing: '1px'}}>Contact</Nav.Link>
+                <Nav.Link as={Link} to="/contact" className="mx-2 text-uppercase fw-bold">Contact</Nav.Link>
               </Nav>
             </Navbar.Collapse>
           </Container>
@@ -106,16 +100,14 @@ function NavBarContent() {
     );
 }
 
-// --- COMPONENT: HERO SECTION (With New Stylish Button) ---
+// --- COMPONENT: HERO SECTION ---
 function HeroSection() {
     const location = useLocation();
     if (location.pathname !== '/') return null;
 
     const scrollToCollection = () => {
         const element = document.getElementById('collection');
-        if (element) {
-            element.scrollIntoView({ behavior: 'smooth' });
-        }
+        if (element) element.scrollIntoView({ behavior: 'smooth' });
     };
 
     return (
@@ -130,31 +122,17 @@ function HeroSection() {
             borderRadius: '0 0 20px 20px'
         }}>
             <Container>
-                <h1 className="display-3 fw-bold mb-3 animate__animated animate__fadeInDown" style={{color: 'white'}}>
-                    Elevate Your Living Space
-                </h1>
-                <p className="lead mb-4 animate__animated animate__fadeInUp" style={{maxWidth: '600px', margin: '0 auto', animationDelay: '0.2s'}}>
-                    Discover our handcrafted collection of premium furniture. 
-                    Designed for comfort, built for style.
-                </p>
-                
-                {/* 👇 UPDATED STYLISH BUTTON */}
-                <Button 
-                    variant="outline-light" // Base variant
-                    size="lg" 
-                    onClick={scrollToCollection}
-                    className="hero-browse-btn animate__animated animate__fadeInUp" 
-                    style={{ animationDelay: '0.4s' }}
-                >
+                <h1 className="display-3 fw-bold mb-3 animate__animated animate__fadeInDown">Elevate Your Living Space</h1>
+                <p className="lead mb-4 animate__animated animate__fadeInUp">Discover our handcrafted collection of premium furniture.</p>
+                <Button variant="outline-light" size="lg" onClick={scrollToCollection} className="animate__animated animate__fadeInUp">
                     BROWSE COLLECTION
                 </Button>
-
             </Container>
         </div>
     );
 }
 
-// --- COMPONENT: TRUST SIGNALS (Restored) ---
+// --- COMPONENT: TRUST SIGNALS ---
 function TrustSection() {
     const location = useLocation();
     if (location.pathname !== '/') return null;
@@ -171,10 +149,10 @@ function TrustSection() {
             <Container>
                 <Row>
                     {features.map((f, i) => (
-                        <Col key={i} md={3} sm={6} className="text-center mb-3 mb-md-0 animate__animated animate__fadeInUp" style={{ animationDelay: `${i * 0.1}s` }}>
-                            <div style={{ fontSize: '2.5rem', marginBottom: '10px' }}>{f.icon}</div>
-                            <h6 style={{ fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px' }}>{f.title}</h6>
-                            <p className="text-muted small mb-0">{f.text}</p>
+                        <Col key={i} md={3} sm={6} className="text-center mb-3">
+                            <div style={{ fontSize: '2.5rem' }}>{f.icon}</div>
+                            <h6 className="fw-bold">{f.title}</h6>
+                            <p className="text-muted small">{f.text}</p>
                         </Col>
                     ))}
                 </Row>
@@ -183,39 +161,13 @@ function TrustSection() {
     );
 }
 
-// --- COMPONENT: FOOTER (Restored "Built by RAFID") ---
+// --- COMPONENT: FOOTER ---
 function Footer() {
     return (
-        <footer style={{ backgroundColor: '#2C3531', color: '#8F9779', marginTop: 'auto', paddingTop: '60px', paddingBottom: '30px' }}>
+        <footer style={{ backgroundColor: '#2C3531', color: '#8F9779', marginTop: 'auto', padding: '60px 0 30px' }}>
             <Container>
-                <Row>
-                    <Col md={4} className="mb-4">
-                        <h5 className="text-white mb-3">Home Decor</h5>
-                        <p className="small">
-                            Creating beautiful spaces since 2004. We believe in quality materials and timeless design.
-                        </p>
-                    </Col>
-                    <Col md={4} className="mb-4">
-                        <h5 className="text-white mb-3">Quick Links</h5>
-                        <ul className="list-unstyled">
-                            <li><Link to="/" className="text-decoration-none text-muted">Shop All</Link></li>
-                            <li><Link to="/contact" className="text-decoration-none text-muted">Contact Us</Link></li>
-                            <li><Link to="/cart" className="text-decoration-none text-muted">My Cart</Link></li>
-                        </ul>
-                    </Col>
-                    <Col md={4} className="mb-4">
-                        <h5 className="text-white mb-3">Newsletter</h5>
-                        <div className="input-group mb-3">
-                            <input type="text" className="form-control" placeholder="Your email" style={{background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white'}} />
-                            <button className="btn btn-outline-light" type="button">Subscribe</button>
-                        </div>
-                    </Col>
-                </Row>
-                <hr style={{borderColor: 'rgba(255,255,255,0.1)'}} />
                 <div className="text-center small">
-                    &copy; 2025 Home Decor Inc. All rights reserved. 
-                    <span className="mx-2">|</span> 
-                    <span style={{ color: '#fff', fontWeight: 'bold', letterSpacing: '1px' }}>Built by RAFID</span>
+                    &copy; 2025 Home Decor Inc. | <span style={{ color: '#fff', fontWeight: 'bold' }}>Built by RAFID</span>
                 </div>
             </Container>
         </footer>
@@ -224,12 +176,9 @@ function Footer() {
 
 // --- MAIN APP COMPONENT ---
 function App() {
-  // 1. Initialize token from localStorage so login persists on refresh
-  const [token, setToken] = React.useState(localStorage.getItem('admin_token'));
+  const [token, setToken] = useState(localStorage.getItem('admin_token'));
 
-  // 2. This effect runs every time the token changes
-  // It automatically attaches the "Key" to every Axios request you make
-  React.useEffect(() => {
+  useEffect(() => {
     if (token) {
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       localStorage.setItem('admin_token', token);
@@ -247,8 +196,7 @@ function App() {
     <CartProvider>
         <Router>
           <div className="App d-flex flex-column min-vh-100">
-            <Toaster position="top-center" reverseOrder={false} />
-
+            <Toaster position="top-center" />
             <NavBarContent />
             <HeroSection />
             <TrustSection />
@@ -261,8 +209,6 @@ function App() {
                 <Route path="/checkout" element={<Checkout />} />
                 <Route path="/contact" element={<Contact />} />
 
-                {/* --- Security Routes --- */}
-                {/* If already logged in, the login page will skip to Admin */}
                 <Route path="/login" element={
                   !token ? <Login setToken={setToken} /> : <Navigate to="/admin" />
                 } />
@@ -271,7 +217,6 @@ function App() {
                   path="/admin/*" 
                   element={
                     <ProtectedRoute token={token}>
-                      {/* Pass logout to Admin so the button works */}
                       <Admin onLogout={handleLogout} />
                     </ProtectedRoute>
                   } 
@@ -285,3 +230,5 @@ function App() {
     </CartProvider>
   );
 }
+
+export default App;
