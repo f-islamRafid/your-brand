@@ -224,6 +224,25 @@ function Footer() {
 
 // --- MAIN APP COMPONENT ---
 function App() {
+  // 1. Initialize token from localStorage so login persists on refresh
+  const [token, setToken] = React.useState(localStorage.getItem('admin_token'));
+
+  // 2. This effect runs every time the token changes
+  // It automatically attaches the "Key" to every Axios request you make
+  React.useEffect(() => {
+    if (token) {
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      localStorage.setItem('admin_token', token);
+    } else {
+      delete axios.defaults.headers.common['Authorization'];
+      localStorage.removeItem('admin_token');
+    }
+  }, [token]);
+
+  const handleLogout = () => {
+    setToken(null);
+  };
+
   return (
     <CartProvider>
         <Router>
@@ -242,13 +261,18 @@ function App() {
                 <Route path="/checkout" element={<Checkout />} />
                 <Route path="/contact" element={<Contact />} />
 
-                {/* Security Routes */}
-                <Route path="/login" element={<Login />} />
+                {/* --- Security Routes --- */}
+                {/* If already logged in, the login page will skip to Admin */}
+                <Route path="/login" element={
+                  !token ? <Login setToken={setToken} /> : <Navigate to="/admin" />
+                } />
+                
                 <Route 
-                  path="/admin" 
+                  path="/admin/*" 
                   element={
-                    <ProtectedRoute>
-                      <Admin />
+                    <ProtectedRoute token={token}>
+                      {/* Pass logout to Admin so the button works */}
+                      <Admin onLogout={handleLogout} />
                     </ProtectedRoute>
                   } 
                 />
@@ -261,5 +285,3 @@ function App() {
     </CartProvider>
   );
 }
-
-export default App;
